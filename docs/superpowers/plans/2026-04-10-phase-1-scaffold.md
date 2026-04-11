@@ -1124,9 +1124,10 @@ async def test_health_includes_service_name(client: AsyncClient):
 - [ ] **Step 7: Run test — verify it fails**
 
 ```bash
-cd apps/api && source .venv/bin/activate && python -m pytest tests/test_health.py -v
+cd /Users/yecao/Claude/Q && source apps/api/.venv/bin/activate
+python -m pytest apps/api/tests/test_health.py -v
 ```
-Expected: `ModuleNotFoundError: No module named 'apps'`
+Expected: `ModuleNotFoundError: No module named 'apps'` (because `apps/__init__.py` doesn't exist yet)
 
 - [ ] **Step 8: Create `apps/__init__.py` and `apps/api/__init__.py`**
 
