@@ -11,6 +11,8 @@ import {
   type Timeframe,
   type DataSource,
 } from "@/lib/api";
+import { Select } from "@/components/Select";
+import { SegmentedControl } from "@/components/SegmentedControl";
 
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
   { value: "1m",  label: "1 min"   },
@@ -156,17 +158,12 @@ export default function RunPage() {
             {loadingStrategies ? (
               <div className="h-9 bg-border rounded animate-pulse" />
             ) : (
-              <select
+              <Select
+                options={strategyList.map((s) => ({ value: s.id, label: s.name }))}
                 value={strategyId}
-                onChange={(e) => setStrategyId(e.target.value)}
-                required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink focus:outline-none focus:ring-1 focus:ring-ink"
-              >
-                <option value="">Select a strategy…</option>
-                {strategyList.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onChange={setStrategyId}
+                placeholder="Select a strategy…"
+              />
             )}
           </div>
 
@@ -186,29 +183,21 @@ export default function RunPage() {
           {/* Asset class */}
           <div>
             <label className="block text-small text-muted mb-1">Asset class</label>
-            <select
+            <SegmentedControl
+              options={ASSET_CLASSES}
               value={assetClass}
-              onChange={(e) => setAssetClass(e.target.value as AssetClass)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink focus:outline-none focus:ring-1 focus:ring-ink"
-            >
-              {ASSET_CLASSES.map((a) => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </select>
+              onChange={setAssetClass}
+            />
           </div>
 
           {/* Timeframe */}
           <div>
             <label className="block text-small text-muted mb-1">Timeframe</label>
-            <select
+            <SegmentedControl
+              options={TIMEFRAMES}
               value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink focus:outline-none focus:ring-1 focus:ring-ink"
-            >
-              {TIMEFRAMES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+              onChange={setTimeframe}
+            />
           </div>
 
           {/* Date range */}
@@ -216,21 +205,23 @@ export default function RunPage() {
             <div className="flex-1">
               <label className="block text-small text-muted mb-1">From</label>
               <input
-                type="date"
+                type="text"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                placeholder="YYYY-MM-DD"
                 required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink focus:outline-none focus:ring-1 focus:ring-ink"
+                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-ink"
               />
             </div>
             <div className="flex-1">
               <label className="block text-small text-muted mb-1">To</label>
               <input
-                type="date"
+                type="text"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                placeholder="YYYY-MM-DD"
                 required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink focus:outline-none focus:ring-1 focus:ring-ink"
+                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-ink"
               />
             </div>
           </div>

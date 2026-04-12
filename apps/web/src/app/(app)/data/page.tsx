@@ -213,19 +213,21 @@ export default function DataPage() {
                   <div className="flex-1">
                     <label className="block text-label uppercase tracking-widest text-muted mb-1">From</label>
                     <input
-                      type="date"
+                      type="text"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 text-body bg-surface border border-border rounded-md outline-none focus:border-body transition-colors duration-[80ms]"
+                      placeholder="YYYY-MM-DD"
+                      className="w-full px-3 py-2 text-body bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-body transition-colors duration-[80ms]"
                     />
                   </div>
                   <div className="flex-1">
                     <label className="block text-label uppercase tracking-widest text-muted mb-1">To</label>
                     <input
-                      type="date"
+                      type="text"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 text-body bg-surface border border-border rounded-md outline-none focus:border-body transition-colors duration-[80ms]"
+                      placeholder="YYYY-MM-DD"
+                      className="w-full px-3 py-2 text-body bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-body transition-colors duration-[80ms]"
                     />
                   </div>
                 </div>
