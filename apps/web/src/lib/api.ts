@@ -88,6 +88,55 @@ export type CSVUploadResult = {
   columns: string[];
 };
 
+// ── Strategies ────────────────────────────────────────────────────────────────
+
+export type StrategyBlock = {
+  id: string;
+  type: "indicator" | "condition" | "action" | "filter";
+  name: string;
+  params: Record<string, unknown>;
+};
+
+export type Strategy = {
+  id: string;
+  name: string;
+  description: string | null;
+  blocks: StrategyBlock[];
+  python_code: string | null;
+  user_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ValidateResult = { valid: boolean; errors: string[] };
+export type CompileResult = { python_code: string };
+
+export const strategies = {
+  list: (token?: string) =>
+    request<Strategy[]>("/strategies", {}, token),
+
+  get: (id: string, token?: string) =>
+    request<Strategy>(`/strategies/${id}`, {}, token),
+
+  create: (body: { name: string; blocks: StrategyBlock[]; description?: string; python_code?: string }, token?: string) =>
+    request<Strategy>("/strategies", { method: "POST", body: JSON.stringify(body) }, token),
+
+  update: (id: string, patch: Partial<{ name: string; description: string; blocks: StrategyBlock[]; python_code: string }>, token?: string) =>
+    request<Strategy>(`/strategies/${id}`, { method: "PATCH", body: JSON.stringify(patch) }, token),
+
+  delete: (id: string, token?: string) =>
+    fetch(`${BASE_URL}/strategies/${id}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }),
+
+  compile: (blocks: StrategyBlock[]) =>
+    request<CompileResult>("/strategies/compile", { method: "POST", body: JSON.stringify({ name: "_", blocks }) }),
+
+  validate: (code: string) =>
+    request<ValidateResult>("/strategies/validate", { method: "POST", body: JSON.stringify({ code }) }),
+};
+
 export const data = {
   search: (q: string, asset_class?: AssetClass) => {
     const params = new URLSearchParams({ q });
