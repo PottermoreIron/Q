@@ -213,21 +213,19 @@ export default function DataPage() {
                   <div className="flex-1">
                     <label className="block text-label uppercase tracking-widest text-muted mb-1">From</label>
                     <input
-                      type="text"
+                      type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      placeholder="YYYY-MM-DD"
-                      className="w-full px-3 py-2 text-small text-[#191919] bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-[#37352F] transition-colors duration-[80ms]"
+                      className="w-full px-3 py-2 text-small text-[#191919] bg-surface border border-border rounded-md outline-none focus:border-[#37352F] transition-colors duration-[80ms] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                     />
                   </div>
                   <div className="flex-1">
                     <label className="block text-label uppercase tracking-widest text-muted mb-1">To</label>
                     <input
-                      type="text"
+                      type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      placeholder="YYYY-MM-DD"
-                      className="w-full px-3 py-2 text-small text-[#191919] bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-[#37352F] transition-colors duration-[80ms]"
+                      className="w-full px-3 py-2 text-small text-[#191919] bg-surface border border-border rounded-md outline-none focus:border-[#37352F] transition-colors duration-[80ms] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                     />
                   </div>
                 </div>
@@ -238,7 +236,7 @@ export default function DataPage() {
                 <button
                   onClick={handlePreview}
                   disabled={!selectedSymbol || isPending}
-                  className="px-5 py-2 bg-ink text-white text-body font-medium rounded-md disabled:opacity-40 transition-opacity active:scale-[0.97] transition-transform duration-[80ms]"
+                  className="px-5 py-2 bg-ink text-white text-body font-medium rounded-md disabled:opacity-40 active:scale-[0.97] transition-[opacity,transform] duration-[80ms]"
                 >
                   {isPending ? "Loading…" : "Preview Data"}
                 </button>

@@ -205,23 +205,21 @@ export default function RunPage() {
             <div className="flex-1">
               <label className="block text-small text-muted mb-1">From</label>
               <input
-                type="text"
+                type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                placeholder="YYYY-MM-DD"
                 required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] placeholder:text-muted focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms]"
+                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
             </div>
             <div className="flex-1">
               <label className="block text-small text-muted mb-1">To</label>
               <input
-                type="text"
+                type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                placeholder="YYYY-MM-DD"
                 required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] placeholder:text-muted focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms]"
+                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
             </div>
           </div>
