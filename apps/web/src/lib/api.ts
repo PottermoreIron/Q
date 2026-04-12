@@ -137,6 +137,61 @@ export const strategies = {
     request<ValidateResult>("/strategies/validate", { method: "POST", body: JSON.stringify({ code }) }),
 };
 
+// ── Backtests ─────────────────────────────────────────────────────────────────
+
+export type DataConfig = {
+  source: DataSource;
+  symbol: string;
+  asset_class: AssetClass;
+  timeframe: Timeframe;
+  start_date: string;
+  end_date: string;
+};
+
+export type Metrics = {
+  sharpe_ratio: number | null;
+  sortino_ratio: number | null;
+  cagr: number | null;
+  max_drawdown: number | null;
+  win_rate: number | null;
+  total_trades: number | null;
+  profit_factor: number | null;
+  final_value: number | null;
+};
+
+export type BacktestRun = {
+  id: string;
+  strategy_id: string | null;
+  strategy_name: string;
+  data_config: DataConfig;
+  status: "pending" | "running" | "completed" | "failed";
+  engine: string | null;
+  metrics: Metrics | null;
+  error_message: string | null;
+  log_output: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export const backtests = {
+  create: (body: { strategy_id: string; data_config: DataConfig }, token?: string) =>
+    request<BacktestRun>("/backtests", { method: "POST", body: JSON.stringify(body) }, token),
+
+  list: (strategy_id?: string, token?: string) => {
+    const qs = strategy_id ? `?strategy_id=${strategy_id}` : "";
+    return request<BacktestRun[]>(`/backtests${qs}`, {}, token);
+  },
+
+  get: (id: string, token?: string) =>
+    request<BacktestRun>(`/backtests/${id}`, {}, token),
+
+  delete: (id: string, token?: string) =>
+    fetch(`${BASE_URL}/backtests/${id}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }),
+};
+
 export const data = {
   search: (q: string, asset_class?: AssetClass) => {
     const params = new URLSearchParams({ q });

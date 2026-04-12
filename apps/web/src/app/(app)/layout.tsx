@@ -2,10 +2,11 @@ import Link from "next/link";
 import { type ReactNode } from "react";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard",  label: "Dashboard"  },
   { href: "/strategies", label: "Strategies" },
-  { href: "/data", label: "Data" },
-  { href: "/results", label: "Results" },
+  { href: "/data",       label: "Data"       },
+  { href: "/run",        label: "Run"        },
+  { href: "/results",    label: "Results"    },
 ];
 
 const BOTTOM_NAV = [{ href: "/settings", label: "Settings" }];
