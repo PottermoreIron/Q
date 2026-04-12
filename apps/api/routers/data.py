@@ -1,9 +1,12 @@
 """
 Data ingestion router.
 
-GET  /data/search?q=BTC&asset_class=crypto   → symbol search
-GET  /data/fetch?symbol=BTC/USDT&...         → fetch OHLCV preview (first 5 bars)
-POST /data/upload                            → upload CSV, returns file_key
+GET  /data/search?q=BTC&asset_class=crypto          → symbol search
+GET  /data/fetch?symbol=BTC/USDT&source=binance&... → fetch OHLCV preview (first 5 bars)
+POST /data/upload                                   → upload CSV, returns file_key
+
+source options: yahoo | binance | polygon | alpha_vantage | alpaca
+Paid sources require the corresponding API keys in .env.
 """
 
 from typing import List, Optional
@@ -51,6 +54,27 @@ async def symbol_search(
     return results[:20]
 
 
+async def _fetch_bars(
+    source: Optional[str],
+    asset_class: AssetClass,
+    symbol: str,
+    timeframe: str,
+    start_date: str,
+    end_date: str,
+):
+    """Route to the correct connector based on source (or asset_class fallback)."""
+    src = (source or "").lower()
+    if src == "polygon":
+        return await data_ingestion.fetch_polygon(symbol, timeframe, start_date, end_date)
+    if src == "alpha_vantage":
+        return await data_ingestion.fetch_alpha_vantage(symbol, timeframe, start_date, end_date)
+    if src == "alpaca":
+        return await data_ingestion.fetch_alpaca(symbol, timeframe, start_date, end_date)
+    if src == "binance" or (not src and asset_class == "crypto"):
+        return await data_ingestion.fetch_binance(symbol, timeframe, start_date, end_date)
+    return await data_ingestion.fetch_yahoo(symbol, timeframe, start_date, end_date)
+
+
 @router.get("/fetch", response_model=DataPreviewOut)
 async def fetch_preview(
     symbol: str = Query(...),
@@ -58,12 +82,12 @@ async def fetch_preview(
     timeframe: Timeframe = Query(...),
     start_date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
     end_date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    source: Optional[str] = Query(None),
 ) -> DataPreviewOut:
     try:
-        if asset_class == "crypto":
-            bars = await data_ingestion.fetch_binance(symbol, timeframe, start_date, end_date)
-        else:
-            bars = await data_ingestion.fetch_yahoo(symbol, timeframe, start_date, end_date)
+        bars = await _fetch_bars(source, asset_class, symbol, timeframe, start_date, end_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Data fetch failed: {exc}") from exc
 

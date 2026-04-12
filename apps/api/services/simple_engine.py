@@ -145,17 +145,18 @@ def _simulate(
 
         # Enter: next bar after signal (i-1 fires, i executes)
         if i > 0 and entries.iloc[i - 1] and position == 0.0:
-            size      = cash / price
-            cost      = size * price * (1 + commission)
-            if cost <= cash:
-                cash     -= cost
-                position  = size
-                entry_px  = price
+            # Size accounts for commission so cost == cash exactly
+            size     = cash / (price * (1 + commission))
+            cost     = size * price * (1 + commission)   # == cash
+            cash    -= cost
+            position = size
+            entry_px = price
 
         # Exit: next bar after signal
         if i > 0 and exits.iloc[i - 1] and position > 0.0:
-            proceeds = position * price * (1 - commission)
-            pnl      = proceeds - (position * entry_px)
+            proceeds   = position * price * (1 - commission)
+            cost_basis = position * entry_px * (1 + commission)
+            pnl        = proceeds - cost_basis
             trades.append({
                 "entry_price": entry_px,
                 "exit_price":  price,
@@ -170,9 +171,10 @@ def _simulate(
 
     # Close open position at last bar
     if position > 0.0:
-        price    = close[-1]
-        proceeds = position * price * (1 - commission)
-        pnl      = proceeds - (position * entry_px)
+        price      = close[-1]
+        proceeds   = position * price * (1 - commission)
+        cost_basis = position * entry_px * (1 + commission)
+        pnl        = proceeds - cost_basis
         trades.append({
             "entry_price": entry_px,
             "exit_price":  price,

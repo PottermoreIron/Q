@@ -103,10 +103,26 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
 
     # Fetch data to decide inline vs Celery
     try:
-        if cfg.asset_class == "crypto":
+        src = cfg.source if hasattr(cfg, "source") else None
+        if src == "polygon":
+            from services.data_ingestion import fetch_polygon
+            bars = await fetch_polygon(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
+        elif src == "alpha_vantage":
+            from services.data_ingestion import fetch_alpha_vantage
+            bars = await fetch_alpha_vantage(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
+        elif src == "alpaca":
+            from services.data_ingestion import fetch_alpaca
+            bars = await fetch_alpaca(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
+        elif cfg.asset_class == "crypto":
             bars = await fetch_binance(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
         else:
             bars = await fetch_yahoo(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
+    except ValueError as exc:
+        run.status = "failed"
+        run.error_message = str(exc)
+        run.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+        return _out(run)
     except Exception as exc:
         run.status = "failed"
         run.error_message = f"Data fetch failed: {exc}"
@@ -182,9 +198,11 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
 @router.get("", response_model=List[BacktestRunOut])
 async def list_runs(
     strategy_id: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> List[BacktestRunOut]:
-    stmt = select(BacktestRun).order_by(BacktestRun.created_at.desc())
+    stmt = select(BacktestRun).order_by(BacktestRun.created_at.desc()).limit(limit).offset(offset)
     if strategy_id:
         stmt = stmt.where(BacktestRun.strategy_id == strategy_id)
     result = await db.execute(stmt)

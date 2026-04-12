@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -36,10 +36,12 @@ def _out(s) -> StrategyOut:
 
 @router.get("", response_model=List[StrategyOut])
 async def list_strategies(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ) -> List[StrategyOut]:
-    strategies = await strategy_svc.list_strategies(db, user.id if user else None)
+    strategies = await strategy_svc.list_strategies(db, user.id if user else None, limit=limit, offset=offset)
     return [_out(s) for s in strategies]
 
 

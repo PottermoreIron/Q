@@ -7,8 +7,13 @@ from models.strategy import Strategy
 from schemas.strategy import StrategyIn, StrategyPatch
 
 
-async def list_strategies(db: AsyncSession, user_id: Optional[str]) -> List[Strategy]:
-    stmt = select(Strategy).order_by(Strategy.updated_at.desc())
+async def list_strategies(
+    db: AsyncSession,
+    user_id: Optional[str],
+    limit: int = 50,
+    offset: int = 0,
+) -> List[Strategy]:
+    stmt = select(Strategy).order_by(Strategy.updated_at.desc()).limit(limit).offset(offset)
     if user_id:
         stmt = stmt.where(Strategy.user_id == user_id)
     result = await db.execute(stmt)

@@ -22,5 +22,12 @@ class Settings(BaseSettings):
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"
 
+    # Paid data source API keys (empty = connector disabled)
+    polygon_api_key: str = ""
+    alpha_vantage_api_key: str = ""
+    alpaca_api_key: str = ""
+    alpaca_api_secret: str = ""
+    alpaca_base_url: str = "https://data.alpaca.markets"
+
 
 settings = Settings()
