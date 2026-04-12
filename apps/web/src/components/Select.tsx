@@ -33,15 +33,17 @@ export function Select<T extends string>({
 
   return (
     <div ref={ref} className="relative">
+      {/* Trigger — styled as an input; focus changes border to Body per design spec */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-surface border border-border rounded-md text-body focus:outline-none focus:ring-1 focus:ring-ink"
+        className={`w-full flex items-center justify-between px-3 py-2 bg-surface border rounded-md text-small transition-colors duration-[80ms] focus-visible:outline-none focus-visible:border-[#37352F] ${
+          open ? "border-[#37352F]" : "border-border"
+        }`}
       >
-        <span className={selected ? "text-ink" : "text-muted"}>
+        <span className={selected ? "text-[#191919]" : "text-muted"}>
           {selected?.label ?? placeholder}
         </span>
-        {/* Chevron */}
         <svg
           width="12"
           height="12"
@@ -54,22 +56,28 @@ export function Select<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-surface border border-border rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onChange(opt.value);
-                setOpen(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-body transition-colors duration-[80ms] ${
-                opt.value === value ? "text-ink bg-background" : "text-ink hover:bg-background"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="absolute z-20 mt-1 w-full bg-surface border border-border rounded-lg overflow-hidden shadow-float">
+          {options.length === 0 ? (
+            <p className="px-3 py-2 text-small text-muted">No options available.</p>
+          ) : (
+            options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 text-small transition-colors duration-[80ms] ${
+                  opt.value === value
+                    ? "text-[#191919] bg-background"
+                    : "text-[#37352F] hover:bg-background"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

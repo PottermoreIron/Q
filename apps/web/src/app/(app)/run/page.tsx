@@ -176,7 +176,7 @@ export default function RunPage() {
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               placeholder="AAPL"
               required
-              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink focus:outline-none focus:ring-1 focus:ring-ink"
+              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] placeholder:text-muted focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms]"
             />
           </div>
 
@@ -210,7 +210,7 @@ export default function RunPage() {
                 onChange={(e) => setStartDate(e.target.value)}
                 placeholder="YYYY-MM-DD"
                 required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-ink"
+                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] placeholder:text-muted focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms]"
               />
             </div>
             <div className="flex-1">
@@ -221,7 +221,7 @@ export default function RunPage() {
                 onChange={(e) => setEndDate(e.target.value)}
                 placeholder="YYYY-MM-DD"
                 required
-                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-body text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-ink"
+                className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] placeholder:text-muted focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms]"
               />
             </div>
           </div>

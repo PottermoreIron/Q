@@ -217,7 +217,7 @@ export default function DataPage() {
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       placeholder="YYYY-MM-DD"
-                      className="w-full px-3 py-2 text-body bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-body transition-colors duration-[80ms]"
+                      className="w-full px-3 py-2 text-small text-[#191919] bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-[#37352F] transition-colors duration-[80ms]"
                     />
                   </div>
                   <div className="flex-1">
@@ -227,7 +227,7 @@ export default function DataPage() {
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       placeholder="YYYY-MM-DD"
-                      className="w-full px-3 py-2 text-body bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-body transition-colors duration-[80ms]"
+                      className="w-full px-3 py-2 text-small text-[#191919] bg-surface border border-border rounded-md outline-none placeholder:text-muted focus:border-[#37352F] transition-colors duration-[80ms]"
                     />
                   </div>
                 </div>
