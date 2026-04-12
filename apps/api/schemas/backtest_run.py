@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 
@@ -27,6 +27,13 @@ class MetricsOut(BaseModel):
     final_value:    Optional[float]
 
 
+class TradeOut(BaseModel):
+    entry_price: float
+    exit_price: float
+    pnl: float
+    side: str
+
+
 class BacktestRunOut(BaseModel):
     id: str
     strategy_id: Optional[str]
@@ -35,6 +42,10 @@ class BacktestRunOut(BaseModel):
     status: str
     engine: Optional[str]
     metrics: Optional[MetricsOut]
+    # sampled equity curve: list of [iso_timestamp, value] pairs
+    equity_curve: Optional[List[List[Any]]]
+    # trade list (capped at 500)
+    trades: Optional[List[TradeOut]]
     error_message: Optional[str]
     log_output: Optional[str]
     created_at: str

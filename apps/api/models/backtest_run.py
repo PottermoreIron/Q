@@ -28,6 +28,10 @@ class BacktestRun(Base):
 
     # results (nullable until completed)
     metrics: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # sampled equity curve: list of [iso_timestamp, value] pairs, max 300 points
+    equity_curve: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    # trade list: list of {entry_price, exit_price, pnl, side}, max 500 trades
+    trades: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     equity_curve_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     log_output: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

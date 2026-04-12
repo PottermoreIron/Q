@@ -60,11 +60,13 @@ async def _run_async(task, run_id: str) -> None:
 
             logs.append(f"Loaded {len(bars)} bars. Running strategy…")
             df = _bars_to_df(bars)
-            metrics, trades, _equity = run_strategy(run.strategy_code, df)
+            metrics, trades, equity = run_strategy(run.strategy_code, df)
 
             run.status = "completed"
             run.engine = "simple"
             run.metrics = metrics
+            run.equity_curve = _sample_equity(equity)
+            run.trades = [dict(t) for t in trades[:500]]
             run.completed_at = datetime.now(timezone.utc)
             run.log_output = "\n".join(logs + [f"Done. {len(trades)} trades."])
 
@@ -80,6 +82,15 @@ async def _get_run(db: AsyncSession, run_id: str):
     from models.backtest_run import BacktestRun
     result = await db.execute(select(BacktestRun).where(BacktestRun.id == run_id))
     return result.scalar_one_or_none()
+
+
+def _sample_equity(equity) -> list:
+    n = len(equity)
+    if n == 0:
+        return []
+    step = max(1, n // 300)
+    sampled = equity.iloc[::step]
+    return [[str(idx), float(val)] for idx, val in sampled.items()]
 
 
 def _bars_to_df(bars) -> pd.DataFrame:

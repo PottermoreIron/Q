@@ -159,6 +159,13 @@ export type Metrics = {
   final_value: number | null;
 };
 
+export type Trade = {
+  entry_price: number;
+  exit_price: number;
+  pnl: number;
+  side: string;
+};
+
 export type BacktestRun = {
   id: string;
   strategy_id: string | null;
@@ -167,6 +174,9 @@ export type BacktestRun = {
   status: "pending" | "running" | "completed" | "failed";
   engine: string | null;
   metrics: Metrics | null;
+  // sampled equity curve: array of [iso_timestamp, value] pairs
+  equity_curve: [string, number][] | null;
+  trades: Trade[] | null;
   error_message: string | null;
   log_output: string | null;
   created_at: string;

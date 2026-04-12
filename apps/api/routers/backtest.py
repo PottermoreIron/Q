@@ -29,12 +29,28 @@ router = APIRouter(prefix="/backtests", tags=["backtests"])
 
 # Threshold: ≤ this many bars → run inline; above → Celery
 _INLINE_BAR_LIMIT = 1_000
+_MAX_EQUITY_POINTS = 300
+_MAX_TRADES = 500
+
+
+def _sample_equity(equity: "pd.Series") -> list:
+    """Downsample equity curve to at most _MAX_EQUITY_POINTS for storage."""
+    n = len(equity)
+    if n == 0:
+        return []
+    step = max(1, n // _MAX_EQUITY_POINTS)
+    sampled = equity.iloc[::step]
+    return [[str(idx), float(val)] for idx, val in sampled.items()]
 
 
 def _out(r: BacktestRun) -> BacktestRunOut:
     metrics = None
     if r.metrics:
         metrics = MetricsOut(**r.metrics)
+    trades_out = None
+    if r.trades is not None:
+        from schemas.backtest_run import TradeOut
+        trades_out = [TradeOut(**t) for t in r.trades]
     return BacktestRunOut(
         id=r.id,
         strategy_id=r.strategy_id,
@@ -43,6 +59,8 @@ def _out(r: BacktestRun) -> BacktestRunOut:
         status=r.status,
         engine=r.engine,
         metrics=metrics,
+        equity_curve=r.equity_curve,
+        trades=trades_out,
         error_message=r.error_message,
         log_output=r.log_output,
         created_at=r.created_at.isoformat(),
@@ -110,11 +128,13 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
 
         try:
             df = _bars_to_df(bars)
-            metrics, trades, _equity = run_strategy(strategy.python_code, df)
+            metrics, trades, equity = run_strategy(strategy.python_code, df)
 
             run.status = "completed"
             run.engine = "simple"
             run.metrics = metrics
+            run.equity_curve = _sample_equity(equity)
+            run.trades = [dict(t) for t in trades[:_MAX_TRADES]]
             run.log_output = f"Ran {len(bars)} bars inline. {len(trades)} trades."
             run.completed_at = datetime.now(timezone.utc)
 
@@ -141,10 +161,12 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
             await db.commit()
             try:
                 df = _bars_to_df(bars)
-                metrics, trades, _equity = run_strategy(strategy.python_code, df)
+                metrics, trades, equity = run_strategy(strategy.python_code, df)
                 run.status = "completed"
                 run.engine = "simple"
                 run.metrics = metrics
+                run.equity_curve = _sample_equity(equity)
+                run.trades = [dict(t) for t in trades[:_MAX_TRADES]]
                 run.log_output = f"Ran {len(bars)} bars (Celery unavailable, ran inline). {len(trades)} trades."
                 run.completed_at = datetime.now(timezone.utc)
             except EngineError as exc:
