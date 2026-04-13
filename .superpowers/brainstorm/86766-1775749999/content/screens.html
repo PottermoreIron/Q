@@ -1,0 +1,203 @@
+<h2>Key Screens & User Flow</h2>
+<p class="subtitle">The 5 core screens — click any to explore</p>
+
+<style>
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 1.5rem 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.flow-step {
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.35rem 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+.flow-arrow { color: #94a3b8; font-size: 1rem; }
+
+.screens {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.screen-card {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.screen-title {
+  background: #f8fafc;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.screen-body {
+  padding: 0.75rem 1rem;
+}
+.mock-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.mock-block {
+  background: #e2e8f0;
+  border-radius: 4px;
+  height: 14px;
+}
+.mock-block.w-full { flex: 1; }
+.mock-block.w-half { flex: 0.5; }
+.mock-block.w-third { flex: 0.33; }
+.mock-block.tall { height: 60px; }
+.mock-block.medium { height: 36px; }
+.mock-block.blue { background: #bfdbfe; }
+.mock-block.green { background: #bbf7d0; }
+.mock-block.chart {
+  flex: 1;
+  height: 70px;
+  background: linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 100%);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.mock-block.chart::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Cpolyline points='0,35 30,25 60,28 90,10 120,20 150,5 180,15 200,8' fill='none' stroke='%233b82f6' stroke-width='2'/%3E%3C/svg%3E") no-repeat bottom;
+  background-size: 100% 100%;
+}
+.tag {
+  font-size: 0.65rem;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+}
+.tag.green { background: #d1fae5; color: #065f46; }
+.tag.purple { background: #ede9fe; color: #5b21b6; }
+.screen-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.5rem;
+}
+</style>
+
+<div class="flow">
+  <div class="flow-step">1. Dashboard</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">2. Strategy Builder</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">3. Data Config</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">4. Run Backtest</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">5. Results</div>
+</div>
+
+<div class="screens">
+
+  <!-- Dashboard -->
+  <div class="screen-card">
+    <div class="screen-title">📊 1. Dashboard</div>
+    <div class="screen-body">
+      <div class="mock-row">
+        <div class="mock-block w-third blue medium"></div>
+        <div class="mock-block w-third green medium"></div>
+        <div class="mock-block w-third medium"></div>
+      </div>
+      <div class="mock-row"><div class="mock-block chart"></div></div>
+      <div class="mock-row">
+        <div class="mock-block w-half"></div>
+        <div class="mock-block w-half"></div>
+      </div>
+      <div class="screen-desc">
+        Recent backtest runs · Quick stats (best Sharpe, best CAGR) · Shortcut to new strategy · Works without login (local results only)
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy Builder -->
+  <div class="screen-card">
+    <div class="screen-title">🧩 2. Strategy Builder <span class="tag">no-code</span> <span class="tag purple">Python</span></div>
+    <div class="screen-body">
+      <div class="mock-row" style="gap:0.75rem">
+        <div style="flex:0.4">
+          <div class="mock-block w-full medium" style="margin-bottom:0.35rem; background:#f1f5f9; border:1px solid #e2e8f0; height:80px; border-radius:6px; padding:0.4rem; font-size:0.65rem; color:#64748b; display:flex; flex-direction:column; gap:0.3rem;">
+            <div style="background:#dbeafe; border-radius:3px; padding:0.15rem 0.35rem; font-size:0.6rem; width:fit-content">EMA Cross</div>
+            <div style="background:#d1fae5; border-radius:3px; padding:0.15rem 0.35rem; font-size:0.6rem; width:fit-content">RSI Filter</div>
+            <div style="background:#ede9fe; border-radius:3px; padding:0.15rem 0.35rem; font-size:0.6rem; width:fit-content">Stop Loss</div>
+          </div>
+        </div>
+        <div style="flex:0.6">
+          <div class="mock-block w-full" style="background:#1e293b; border-radius:6px; height:80px; padding:0.4rem; font-family:monospace; font-size:0.6rem; color:#94a3b8;">
+            <span style="color:#7dd3fc">def</span> <span style="color:#a5f3fc">strategy</span>(data):<br>
+            &nbsp; ema = <span style="color:#86efac">ema</span>(data, 20)<br>
+            &nbsp; <span style="color:#7dd3fc">if</span> crossover(ema):<br>
+            &nbsp;&nbsp;&nbsp; <span style="color:#fbbf24">buy</span>(size=0.1)
+          </div>
+        </div>
+      </div>
+      <div class="screen-desc">
+        Left: drag-and-drop blocks (no-code) → Right: auto-generated Python. Advanced users can edit code directly. Tab to switch modes.
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Config -->
+  <div class="screen-card">
+    <div class="screen-title">📥 3. Data Configuration</div>
+    <div class="screen-body">
+      <div class="mock-row">
+        <div class="mock-block w-third blue" style="height:22px; border-radius:4px;"></div>
+        <div class="mock-block w-third" style="height:22px; border-radius:4px;"></div>
+        <div class="mock-block w-third green" style="height:22px; border-radius:4px;"></div>
+      </div>
+      <div class="mock-row"><div class="mock-block w-full" style="height:18px;"></div></div>
+      <div class="mock-row">
+        <div class="mock-block w-half"></div>
+        <div class="mock-block w-half blue" style="height:22px;"></div>
+      </div>
+      <div class="screen-desc">
+        Source picker (Upload / Yahoo Finance / Binance / Polygon) · Symbol search · Date range · Timeframe (1m, 1h, 1d…) · Auto-detect asset class for engine routing
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="screen-card">
+    <div class="screen-title">📈 5. Results Explorer</div>
+    <div class="screen-body">
+      <div class="mock-row">
+        <div class="mock-block w-third blue medium"></div>
+        <div class="mock-block w-third green medium"></div>
+        <div class="mock-block w-third medium"></div>
+      </div>
+      <div class="mock-row"><div class="mock-block chart"></div></div>
+      <div class="mock-row">
+        <div class="mock-block w-full" style="height:30px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px;"></div>
+      </div>
+      <div class="screen-desc">
+        Equity curve · Key metrics (Sharpe, Sortino, Max DD, CAGR, Win rate) · Trade log table · Export CSV/PDF · Compare multiple runs
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:1rem">Does this screen layout match your vision? Let me know in the terminal.</p>

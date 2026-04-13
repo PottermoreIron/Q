@@ -1,0 +1,178 @@
+<h2>System Architecture</h2>
+<p class="subtitle">Next.js + Expo monorepo · FastAPI backend · Dual backtesting engines</p>
+
+<style>
+.arch {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.arch-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.arch-col h4 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+  margin: 0 0 0.25rem 0;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.4rem;
+}
+.arch-box {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+.arch-box h5 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.85rem;
+  color: #1e293b;
+}
+.arch-box p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+.arch-box.highlight {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.arch-box.highlight h5 { color: #1d4ed8; }
+.arch-box.engine {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+.arch-box.engine h5 { color: #065f46; }
+.arrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0.25rem 0;
+}
+.badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  background: #e2e8f0;
+  color: #475569;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  margin: 0.1rem 0.15rem 0 0;
+}
+.badge.blue { background: #dbeafe; color: #1d4ed8; }
+.badge.green { background: #d1fae5; color: #065f46; }
+.badge.orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+</style>
+
+<div class="arch">
+  <!-- FRONTEND -->
+  <div class="arch-col">
+    <h4>Frontend (Monorepo)</h4>
+    <div class="arch-box highlight">
+      <h5>Next.js Web App</h5>
+      <p>Chart dashboard · Monaco Python editor · Visual strategy builder · Results explorer</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge blue">TypeScript</span>
+        <span class="badge blue">Tailwind</span>
+        <span class="badge blue">Recharts</span>
+      </div>
+    </div>
+    <div class="arch-box highlight">
+      <h5>Expo / React Native App</h5>
+      <p>Portfolio view · Quick backtest runner · Push notifications · Charts (Victory Native)</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge blue">iOS</span>
+        <span class="badge blue">Android</span>
+      </div>
+    </div>
+    <div class="arch-box">
+      <h5>Shared Packages</h5>
+      <p><strong>@app/api</strong> — typed API client<br>
+         <strong>@app/logic</strong> — strategy validation, formatters<br>
+         <strong>@app/ui</strong> — shared components</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge">Turborepo</span>
+        <span class="badge">Zod</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKEND -->
+  <div class="arch-col">
+    <h4>Backend (FastAPI)</h4>
+    <div class="arch-box">
+      <h5>Auth Service</h5>
+      <p>Optional login · JWT tokens · OAuth (Google) · Works anonymously too</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge">FastAPI Users</span>
+      </div>
+    </div>
+    <div class="arch-box">
+      <h5>Data Ingestion Service</h5>
+      <p>CSV/JSON upload · Yahoo Finance · Binance · Alpha Vantage · Polygon.io · Alpaca</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge">yfinance</span>
+        <span class="badge">ccxt</span>
+      </div>
+    </div>
+    <div class="arch-box">
+      <h5>Strategy Service</h5>
+      <p>Save/load strategies · Validate Python code (sandboxed) · Visual builder → Python compiler</p>
+    </div>
+    <div class="arch-box engine">
+      <h5>Backtesting Engine Router</h5>
+      <p>Routes by asset class:<br>
+         <strong>VectorBT</strong> → Crypto &amp; quant (fast, vectorized)<br>
+         <strong>Backtrader</strong> → Stocks, Forex, Futures (event-driven)</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge green">Celery workers</span>
+        <span class="badge green">Redis queue</span>
+      </div>
+    </div>
+    <div class="arch-box">
+      <h5>Results Service</h5>
+      <p>Sharpe, Sortino, max drawdown, CAGR · Equity curve · Trade log · Export (CSV/PDF)</p>
+    </div>
+  </div>
+
+  <!-- DATA & INFRA -->
+  <div class="arch-col">
+    <h4>Data &amp; Infrastructure</h4>
+    <div class="arch-box">
+      <h5>PostgreSQL</h5>
+      <p>Users · Strategies · Backtest run metadata · Result summaries</p>
+    </div>
+    <div class="arch-box">
+      <h5>Redis</h5>
+      <p>Job queue (Celery) · API response cache · Session tokens</p>
+    </div>
+    <div class="arch-box">
+      <h5>Object Storage (S3-compatible)</h5>
+      <p>Uploaded CSV/JSON data files · Large result datasets · Strategy exports</p>
+      <div style="margin-top:0.4rem">
+        <span class="badge">MinIO (self-hosted)</span>
+        <span class="badge">or AWS S3</span>
+      </div>
+    </div>
+    <div class="arch-box">
+      <h5>Future-Ready Hooks</h5>
+      <p>
+        <span class="badge orange">Paper trading</span>
+        <span class="badge orange">Live broker API</span>
+        <span class="badge orange">Strategy marketplace</span>
+        <span class="badge orange">AI suggestions</span>
+      </p>
+      <p style="margin-top:0.4rem">Architecture slots left open — no code written yet.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">Does this architecture look right? Let me know in the terminal.</p>

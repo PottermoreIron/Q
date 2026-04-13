@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Tokens ── */
+  :root {
+    --bg:       #F7F6F3;
+    --surface:  #FFFFFF;
+    --border:   #E9E9E7;
+    --muted:    #9B9A97;
+    --body:     #37352F;
+    --ink:      #191919;
+    --positive: #16A34A;
+    --negative: #DC2626;
+    --warning:  #D97706;
+    --font-serif: 'DM Serif Display', Georgia, serif;
+    --font-sans:  'DM Sans', system-ui, sans-serif;
+    --font-mono:  'JetBrains Mono', monospace;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --shadow-float: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  body { background: var(--bg); font-family: var(--font-sans); color: var(--body); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  /* ── Layout ── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; }
+  .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sidebar-logo span { font-family: var(--font-serif); font-style: italic; font-size: 1.1rem; color: var(--ink); }
+  .sidebar-logo sub { font-family: var(--font-sans); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); display: block; margin-top: 1px; font-style: normal; }
+  .nav-group { padding: 0 12px; margin-bottom: 4px; }
+  .nav-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 0 8px; margin-bottom: 4px; margin-top: 16px; display: block; font-weight: 500; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-md); font-size: 0.8125rem; color: var(--body); cursor: pointer; transition: background 80ms linear; text-decoration: none; }
+  .nav-item:hover { background: var(--bg); }
+  .nav-item.active { background: var(--bg); color: var(--ink); font-weight: 500; }
+  .nav-icon { width: 16px; height: 16px; opacity: 0.5; flex-shrink: 0; }
+  .nav-item.active .nav-icon { opacity: 1; }
+  .sidebar-bottom { margin-top: auto; padding: 0 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+
+  /* ── Main ── */
+  .main { flex: 1; overflow-y: auto; }
+  .main-inner { max-width: 1080px; padding: 40px 48px; }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 32px; }
+  .page-title { font-family: var(--font-serif); font-style: italic; font-size: 2rem; color: var(--ink); line-height: 1.15; margin-bottom: 4px; }
+  .page-subtitle { font-size: 0.8125rem; color: var(--muted); }
+
+  /* ── Section ── */
+  .section { margin-bottom: 40px; }
+  .section-heading { font-size: 0.875rem; font-weight: 500; color: var(--ink); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+
+  /* ── Summary metrics ── */
+  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .metric-value { font-family: var(--font-sans); font-size: 1.5rem; font-weight: 300; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 4px; }
+  .metric-value.positive { color: var(--positive); }
+  .metric-value.negative { color: var(--negative); }
+  .metric-label { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+
+  /* ── Run cards ── */
+  .runs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .run-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; cursor: pointer; transition: border-color 120ms linear; }
+  .run-card:hover { border-color: var(--muted); }
+  .run-card.new { animation: slide-up-fade 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .run-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; margin-bottom: 10px; }
+  .run-name { font-family: var(--font-serif); font-style: italic; font-size: 1.1rem; color: var(--ink); margin-bottom: 2px; line-height: 1.25; }
+  .run-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; }
+  .run-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 14px; }
+  .run-metrics { display: flex; gap: 16px; }
+  .run-metric-val { font-size: 1rem; font-weight: 400; color: var(--ink); }
+  .run-metric-val.pos { color: var(--positive); }
+  .run-metric-val.neg { color: var(--negative); }
+  .run-metric-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 1px; font-weight: 500; }
+
+  /* ── Quick start ── */
+  .quick-start { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; display: flex; align-items: center; justify-content: space-between; }
+  .quick-start-text h3 { font-family: var(--font-serif); font-style: italic; font-size: 1.1rem; color: var(--ink); margin-bottom: 4px; }
+  .quick-start-text p { font-size: 0.8125rem; color: var(--muted); max-width: 380px; }
+  .btn-primary { font-family: var(--font-sans); font-size: 0.8125rem; font-weight: 500; background: var(--ink); color: white; border: none; border-radius: var(--radius-md); padding: 9px 18px; cursor: pointer; transition: opacity 100ms linear; white-space: nowrap; }
+  .btn-primary:hover { opacity: 0.8; }
+  .btn-primary:active { transform: scale(0.97); transition-duration: 80ms; }
+
+  /* ── Status badge ── */
+  .status { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 10px; }
+  .status.completed { background: #DCFCE7; color: #15803D; }
+  .status.running { background: #FEF3C7; color: #B45309; }
+
+  /* ── Animations ── */
+  @keyframes slide-up-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .run-card:nth-child(1) { animation-delay: 0ms; }
+  .run-card:nth-child(2) { animation-delay: 60ms; }
+  .run-card:nth-child(3) { animation-delay: 120ms; }
+  .metric-card { animation: count-up 400ms cubic-bezier(0.16,1,0.3,1) both; }
+  .metric-card:nth-child(1) { animation-delay: 80ms; }
+  .metric-card:nth-child(2) { animation-delay: 140ms; }
+  .metric-card:nth-child(3) { animation-delay: 200ms; }
+  .metric-card:nth-child(4) { animation-delay: 260ms; }
+
+  /* ── SVG icons (inline) ── */
+  svg { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span>Backtest</span>
+      <sub>Strategy Research Platform</sub>
+    </div>
+
+    <nav class="nav-group">
+      <span class="nav-label">Workspace</span>
+      <a class="nav-item active" href="#">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" href="#">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Strategies
+      </a>
+      <a class="nav-item" href="#">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><polyline points="1,11 5,7 8,9 11,4 15,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Results
+      </a>
+      <a class="nav-item" href="#">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Data
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <a class="nav-item" href="#">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Account
+      </a>
+      <a class="nav-item" href="#">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M11.54 4.46l-1.41 1.41M4.95 11.54l-1.41 1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Settings
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+    <div class="main-inner">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Your recent backtest activity</p>
+      </div>
+
+      <!-- Summary metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-value">2.41</div>
+          <div class="metric-label">Best Sharpe</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value positive">+47%</div>
+          <div class="metric-label">Best CAGR</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value negative">−8.3%</div>
+          <div class="metric-label">Lowest Drawdown</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">12</div>
+          <div class="metric-label">Total Runs</div>
+        </div>
+      </div>
+
+      <!-- Recent runs -->
+      <div class="section">
+        <div class="section-heading">Recent Runs</div>
+        <div class="runs-grid">
+
+          <div class="run-card new">
+            <div class="run-tag">
+              <span class="status completed">Completed</span>
+            </div>
+            <div class="run-name">EMA Crossover</div>
+            <div class="run-meta">BTC/USDT · 1D · Jan 2022 – Dec 2023</div>
+            <hr class="run-divider">
+            <div class="run-metrics">
+              <div>
+                <div class="run-metric-val">2.41</div>
+                <div class="run-metric-lbl">Sharpe</div>
+              </div>
+              <div>
+                <div class="run-metric-val pos">+47%</div>
+                <div class="run-metric-lbl">CAGR</div>
+              </div>
+              <div>
+                <div class="run-metric-val neg">−12%</div>
+                <div class="run-metric-lbl">Max DD</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="run-card new">
+            <div class="run-tag">
+              <span class="status completed">Completed</span>
+            </div>
+            <div class="run-name">RSI Mean Reversion</div>
+            <div class="run-meta">AAPL · 4H · Jan 2023 – Dec 2023</div>
+            <hr class="run-divider">
+            <div class="run-metrics">
+              <div>
+                <div class="run-metric-val">1.87</div>
+                <div class="run-metric-lbl">Sharpe</div>
+              </div>
+              <div>
+                <div class="run-metric-val pos">+31%</div>
+                <div class="run-metric-lbl">CAGR</div>
+              </div>
+              <div>
+                <div class="run-metric-val neg">−9%</div>
+                <div class="run-metric-lbl">Max DD</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="run-card new">
+            <div class="run-tag">
+              <span class="status running">Running</span>
+            </div>
+            <div class="run-name">Bollinger Breakout</div>
+            <div class="run-meta">EUR/USD · 1H · 2020 – 2024</div>
+            <hr class="run-divider">
+            <div class="run-metrics">
+              <div>
+                <div class="run-metric-val" style="color:var(--muted)">—</div>
+                <div class="run-metric-lbl">Sharpe</div>
+              </div>
+              <div>
+                <div class="run-metric-val" style="color:var(--muted)">—</div>
+                <div class="run-metric-lbl">CAGR</div>
+              </div>
+              <div>
+                <div class="run-metric-val" style="color:var(--muted)">—</div>
+                <div class="run-metric-lbl">Max DD</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Quick start -->
+      <div class="section">
+        <div class="section-heading">Start Something New</div>
+        <div class="quick-start">
+          <div class="quick-start-text">
+            <h3>New Strategy</h3>
+            <p>Build with the visual block editor or write Python directly. Supports stocks, crypto, forex, and futures.</p>
+          </div>
+          <button class="btn-primary">New Strategy</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+</body>
+</html>

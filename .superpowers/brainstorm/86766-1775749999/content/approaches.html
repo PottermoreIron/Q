@@ -1,0 +1,45 @@
+<h2>Tech Stack Approaches</h2>
+<p class="subtitle">Three ways to build a cross-platform (web + mobile) backtesting app</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Flutter — Single Codebase</h3>
+      <p>One Dart codebase targets iOS, Android, and Web. FastAPI Python backend handles heavy backtesting.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>True single codebase</li><li>Excellent mobile performance</li><li>Rich chart/visualization widgets</li><li>Fast hot-reload dev cycle</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Dart learning curve</li><li>Monaco/Python editor support is limited</li><li>Smaller ecosystem than React</li></ul></div>
+      </div>
+      <p><span class="label">Stack:</span> Flutter · Dart · FastAPI · PostgreSQL · Redis</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Next.js + React Native (Monorepo) — Recommended</h3>
+      <p>Shared TypeScript business logic. Next.js for web (Monaco code editor). Expo/React Native for mobile. FastAPI Python backend.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Monaco editor (VS Code quality) on web</li><li>Best-in-class web performance & SEO</li><li>Huge JS/TS ecosystem</li><li>Shared packages reduce duplication</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Two frontend targets to maintain</li><li>More complex monorepo setup</li></ul></div>
+      </div>
+      <p><span class="label">Stack:</span> Next.js · Expo/RN · TypeScript · FastAPI · PostgreSQL · Redis</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>React Native Web — Shared UI</h3>
+      <p>React Native components that render to both DOM and native. One UI codebase. FastAPI Python backend.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Maximum code sharing (UI + logic)</li><li>Single component library</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>React Native Web is not production-mature</li><li>Charts/complex layouts degrade on web</li><li>Limited Monaco editor support</li><li>Styling is harder to get right</li></ul></div>
+      </div>
+      <p><span class="label">Stack:</span> React Native Web · TypeScript · FastAPI · PostgreSQL · Redis</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:1.5rem">👆 I recommend <strong>Option B</strong> — it gives you the best Python code editor experience on web (critical for quant users) while still shipping a polished native mobile app.</p>

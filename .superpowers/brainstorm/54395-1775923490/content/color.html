@@ -1,0 +1,230 @@
+<h2>Color Palette</h2>
+<p class="subtitle">Near-monochromatic base with one accent — which accent feels right?</p>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display:ital@1&display=swap');
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.palette-card {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.card-preview {
+  padding: 1rem;
+  border-bottom: 1.5px solid #e2e8f0;
+}
+.card-meta {
+  padding: 0.75rem 1rem;
+  background: #fff;
+}
+.card-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 0.2rem;
+}
+.card-desc {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+/* shared preview structure */
+.preview-bg { border-radius: 6px; padding: 0.75rem; }
+.preview-label { font-family: 'DM Sans', sans-serif; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.3rem; }
+.preview-title { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 1rem; margin-bottom: 0.5rem; line-height: 1.2; }
+.preview-row { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.3rem; }
+.preview-tag { font-family: 'DM Sans', sans-serif; font-size: 0.6rem; padding: 0.15em 0.45em; border-radius: 3px; font-weight: 500; }
+.preview-metric { font-family: 'DM Sans', sans-serif; font-size: 1.1rem; font-weight: 300; }
+.preview-metric-label { font-family: 'DM Sans', sans-serif; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.preview-btn { font-family: 'DM Sans', sans-serif; font-size: 0.65rem; font-weight: 500; padding: 0.3em 0.7em; border-radius: 4px; display: inline-block; margin-top: 0.4rem; }
+.swatch-row { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
+.swatch { height: 8px; border-radius: 2px; flex: 1; }
+
+/* A: Ink Blue (Apple-like) */
+.a-bg { background: #f8fafc; }
+.a-label { color: #94a3b8; }
+.a-title { color: #0f172a; }
+.a-metric { color: #0f172a; }
+.a-metric-label { color: #94a3b8; }
+.a-tag { background: #dbeafe; color: #1d4ed8; }
+.a-btn { background: #2563eb; color: white; }
+
+/* B: Warm Slate + Amber */
+.b-bg { background: #fafaf9; }
+.b-label { color: #a8a29e; }
+.b-title { color: #1c1917; }
+.b-metric { color: #1c1917; }
+.b-metric-label { color: #a8a29e; }
+.b-tag { background: #fef3c7; color: #92400e; }
+.b-btn { background: #d97706; color: white; }
+
+/* C: Sage Green */
+.c-bg { background: #f9fafb; }
+.c-label { color: #9ca3af; }
+.c-title { color: #111827; }
+.c-metric { color: #111827; }
+.c-metric-label { color: #9ca3af; }
+.c-tag { background: #d1fae5; color: #065f46; }
+.c-btn { background: #059669; color: white; }
+
+/* D: Near-black + warm off-white (Notion-pure) */
+.d-bg { background: #f7f6f3; }
+.d-label { color: #9b9a97; }
+.d-title { color: #191919; }
+.d-metric { color: #191919; }
+.d-metric-label { color: #9b9a97; }
+.d-tag { background: #e9e9e7; color: #37352f; }
+.d-btn { background: #37352f; color: white; }
+</style>
+
+<div class="palette-grid">
+
+  <!-- A: Ink Blue -->
+  <div class="palette-card option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-preview a-bg preview-bg">
+      <div class="preview-label a-label">Strategy</div>
+      <div class="preview-title a-title">EMA Crossover</div>
+      <div class="preview-row">
+        <span class="preview-tag a-tag">Crypto</span>
+        <span class="preview-tag a-tag">1D</span>
+      </div>
+      <div class="preview-row">
+        <div>
+          <div class="preview-metric a-metric">2.41</div>
+          <div class="preview-metric-label a-metric-label">Sharpe</div>
+        </div>
+        <div style="margin-left:0.75rem">
+          <div class="preview-metric a-metric">+47%</div>
+          <div class="preview-metric-label a-metric-label">CAGR</div>
+        </div>
+      </div>
+      <div class="preview-btn a-btn">Run Backtest</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#0f172a"></div>
+        <div class="swatch" style="background:#334155"></div>
+        <div class="swatch" style="background:#e2e8f0"></div>
+        <div class="swatch" style="background:#f8fafc"></div>
+        <div class="swatch" style="background:#2563eb"></div>
+      </div>
+    </div>
+    <div class="card-meta">
+      <div class="card-name">A — Ink Blue</div>
+      <div class="card-desc">Apple-close. Cool, precise, confident. Blue accent feels trustworthy and tech-native.</div>
+    </div>
+  </div>
+
+  <!-- B: Warm Amber -->
+  <div class="palette-card option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-preview b-bg preview-bg">
+      <div class="preview-label b-label">Strategy</div>
+      <div class="preview-title b-title">EMA Crossover</div>
+      <div class="preview-row">
+        <span class="preview-tag b-tag">Crypto</span>
+        <span class="preview-tag b-tag">1D</span>
+      </div>
+      <div class="preview-row">
+        <div>
+          <div class="preview-metric b-metric">2.41</div>
+          <div class="preview-metric-label b-metric-label">Sharpe</div>
+        </div>
+        <div style="margin-left:0.75rem">
+          <div class="preview-metric b-metric">+47%</div>
+          <div class="preview-metric-label b-metric-label">CAGR</div>
+        </div>
+      </div>
+      <div class="preview-btn b-btn">Run Backtest</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#1c1917"></div>
+        <div class="swatch" style="background:#44403c"></div>
+        <div class="swatch" style="background:#e7e5e4"></div>
+        <div class="swatch" style="background:#fafaf9"></div>
+        <div class="swatch" style="background:#d97706"></div>
+      </div>
+    </div>
+    <div class="card-meta">
+      <div class="card-name">B — Warm Amber</div>
+      <div class="card-desc">Vintage warmth. Off-white base, warm stone grays, amber accent. Feels classic and human.</div>
+    </div>
+  </div>
+
+  <!-- C: Sage Green -->
+  <div class="palette-card option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-preview c-bg preview-bg">
+      <div class="preview-label c-label">Strategy</div>
+      <div class="preview-title c-title">EMA Crossover</div>
+      <div class="preview-row">
+        <span class="preview-tag c-tag">Crypto</span>
+        <span class="preview-tag c-tag">1D</span>
+      </div>
+      <div class="preview-row">
+        <div>
+          <div class="preview-metric c-metric">2.41</div>
+          <div class="preview-metric-label c-metric-label">Sharpe</div>
+        </div>
+        <div style="margin-left:0.75rem">
+          <div class="preview-metric c-metric">+47%</div>
+          <div class="preview-metric-label c-metric-label">CAGR</div>
+        </div>
+      </div>
+      <div class="preview-btn c-btn">Run Backtest</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#111827"></div>
+        <div class="swatch" style="background:#374151"></div>
+        <div class="swatch" style="background:#e5e7eb"></div>
+        <div class="swatch" style="background:#f9fafb"></div>
+        <div class="swatch" style="background:#059669"></div>
+      </div>
+    </div>
+    <div class="card-meta">
+      <div class="card-name">C — Sage Green</div>
+      <div class="card-desc">Calm and natural. Green accent echoes profit/growth without being garish. Distinctive.</div>
+    </div>
+  </div>
+
+  <!-- D: Notion Pure -->
+  <div class="palette-card option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="card-preview d-bg preview-bg">
+      <div class="preview-label d-label">Strategy</div>
+      <div class="preview-title d-title">EMA Crossover</div>
+      <div class="preview-row">
+        <span class="preview-tag d-tag">Crypto</span>
+        <span class="preview-tag d-tag">1D</span>
+      </div>
+      <div class="preview-row">
+        <div>
+          <div class="preview-metric d-metric">2.41</div>
+          <div class="preview-metric-label d-metric-label">Sharpe</div>
+        </div>
+        <div style="margin-left:0.75rem">
+          <div class="preview-metric d-metric">+47%</div>
+          <div class="preview-metric-label d-metric-label">CAGR</div>
+        </div>
+      </div>
+      <div class="preview-btn d-btn">Run Backtest</div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#191919"></div>
+        <div class="swatch" style="background:#37352f"></div>
+        <div class="swatch" style="background:#e9e9e7"></div>
+        <div class="swatch" style="background:#f7f6f3"></div>
+        <div class="swatch" style="background:#37352f"></div>
+      </div>
+    </div>
+    <div class="card-meta">
+      <div class="card-name">D — Notion Pure</div>
+      <div class="card-desc">No accent at all. Near-black on warm off-white. Maximum restraint. Typography does all the work.</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle">My lean: <strong>Option B (Warm Amber)</strong> — pairs perfectly with DM Serif Display and gives the vintage warmth you described, while staying calm and uncluttered. Click your pick or tell me in the terminal.</p>

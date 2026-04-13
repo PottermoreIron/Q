@@ -1,0 +1,117 @@
+<h2>Typography Direction</h2>
+<p class="subtitle">How should "vintage / classic" express itself — purely in type, or in texture too?</p>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap');
+
+.type-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.type-card {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.type-card:hover { border-color: #94a3b8; }
+.type-card.option { cursor: pointer; }
+
+/* Option A — Pure Apple/Notion */
+.type-a .label-tag { font-family: 'Inter', sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.75rem; }
+.type-a .heading { font-family: 'Inter', sans-serif; font-size: 1.4rem; font-weight: 600; color: #0f172a; line-height: 1.2; margin-bottom: 0.4rem; }
+.type-a .subhead { font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 400; color: #64748b; margin-bottom: 0.75rem; }
+.type-a .metric { font-family: 'Inter', sans-serif; font-size: 1.6rem; font-weight: 300; color: #0f172a; letter-spacing: -0.02em; }
+.type-a .metric-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.type-a .body { font-family: 'Inter', sans-serif; font-size: 0.8rem; color: #475569; line-height: 1.6; margin-top: 0.75rem; }
+
+/* Option B — Serif headers, sans body */
+.type-b .label-tag { font-family: 'DM Sans', sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.75rem; }
+.type-b .heading { font-family: 'DM Serif Display', serif; font-size: 1.5rem; font-weight: 400; color: #0f172a; line-height: 1.2; margin-bottom: 0.4rem; font-style: italic; }
+.type-b .subhead { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 400; color: #64748b; margin-bottom: 0.75rem; }
+.type-b .metric { font-family: 'DM Serif Display', serif; font-size: 1.6rem; font-weight: 400; color: #0f172a; letter-spacing: -0.01em; }
+.type-b .metric-label { font-family: 'DM Sans', sans-serif; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.type-b .body { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #475569; line-height: 1.6; margin-top: 0.75rem; }
+
+/* Option C — Classic editorial */
+.type-c .label-tag { font-family: 'Inter', sans-serif; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.75rem; }
+.type-c .heading { font-family: 'Playfair Display', serif; font-size: 1.45rem; font-weight: 600; color: #0f172a; line-height: 1.2; margin-bottom: 0.4rem; }
+.type-c .subhead { font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 400; color: #64748b; margin-bottom: 0.75rem; }
+.type-c .metric { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 400; color: #0f172a; }
+.type-c .metric-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.type-c .body { font-family: 'Inter', sans-serif; font-size: 0.8rem; color: #475569; line-height: 1.6; margin-top: 0.75rem; }
+
+.divider { border: none; border-top: 1px solid #f1f5f9; margin: 0.75rem 0; }
+.metrics-row { display: flex; gap: 1rem; }
+.metric-block { flex: 1; }
+</style>
+
+<div class="type-cards">
+
+  <!-- A: Pure Apple/Notion -->
+  <div class="type-card option type-a" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="label-tag">Option A — Pure Sans</div>
+    <div class="heading">EMA Crossover</div>
+    <div class="subhead">BTC/USDT · 1D · 2022–2024</div>
+    <hr class="divider">
+    <div class="metrics-row">
+      <div class="metric-block">
+        <div class="metric">2.41</div>
+        <div class="metric-label">Sharpe</div>
+      </div>
+      <div class="metric-block">
+        <div class="metric">−12%</div>
+        <div class="metric-label">Max DD</div>
+      </div>
+    </div>
+    <div class="body">Clean, modern, Apple-like neutrality. Inter at multiple weights. Precise, clinical, extremely legible.</div>
+  </div>
+
+  <!-- B: Serif display + sans body -->
+  <div class="type-card option type-b" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="label-tag">Option B — Serif Display</div>
+    <div class="heading">EMA Crossover</div>
+    <div class="subhead">BTC/USDT · 1D · 2022–2024</div>
+    <hr class="divider">
+    <div class="metrics-row">
+      <div class="metric-block">
+        <div class="metric">2.41</div>
+        <div class="metric-label">Sharpe</div>
+      </div>
+      <div class="metric-block">
+        <div class="metric">−12%</div>
+        <div class="metric-label">Max DD</div>
+      </div>
+    </div>
+    <div class="body">Italic serif for headings (DM Serif Display), clean sans for data. Warm, editorial, vintage personality — still highly readable.</div>
+  </div>
+
+  <!-- C: Classic Playfair -->
+  <div class="type-card option type-c" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="label-tag">Option C — Classic Editorial</div>
+    <div class="heading">EMA Crossover</div>
+    <div class="subhead">BTC/USDT · 1D · 2022–2024</div>
+    <hr class="divider">
+    <div class="metrics-row">
+      <div class="metric-block">
+        <div class="metric">2.41</div>
+        <div class="metric-label">Sharpe</div>
+      </div>
+      <div class="metric-block">
+        <div class="metric">−12%</div>
+        <div class="metric-label">Max DD</div>
+      </div>
+    </div>
+    <div class="body">Playfair Display for headings and key numbers. Classic, authoritative, like a financial newspaper. Numbers feel weighty and credible.</div>
+  </div>
+
+</div>
+
+<p class="subtitle">My lean: <strong>Option B</strong> — the italic serif for page titles and section headers gives vintage character, while numbers and data stay in clean sans. Best of both.</p>
+<p class="subtitle">Click your preference or tell me in the terminal.</p>
