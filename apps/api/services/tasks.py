@@ -6,17 +6,15 @@ Each task fetches its own DB session (not injected by FastAPI).
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import datetime, timezone
 
-import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from config import settings
 from services.celery_app import celery_app
-from services.data_ingestion import fetch_binance, fetch_yahoo
-from services.simple_engine import EngineError, run_strategy
+from services.data.registry import get_provider
+from services.engines.registry import get_engine
 
 
 def _make_session() -> async_sessionmaker:
@@ -26,12 +24,10 @@ def _make_session() -> async_sessionmaker:
 
 @celery_app.task(bind=True, name="tasks.run_backtest")
 def run_backtest_task(self, run_id: str) -> None:
-    """Heavy backtest task. Updates BacktestRun row directly."""
     asyncio.run(_run_async(self, run_id))
 
 
 async def _run_async(task, run_id: str) -> None:
-    # Import here to avoid circular import at module level
     from models.backtest_run import BacktestRun
 
     session_factory = _make_session()
@@ -47,33 +43,35 @@ async def _run_async(task, run_id: str) -> None:
 
         try:
             cfg = run.data_config
-            logs: list[str] = []
+            logs: list[str] = [f"Fetching {cfg['symbol']} {cfg['timeframe']} data…"]
 
-            logs.append(f"Fetching {cfg['symbol']} {cfg['timeframe']} data…")
-            if cfg["asset_class"] == "crypto":
-                bars = await fetch_binance(cfg["symbol"], cfg["timeframe"], cfg["start_date"], cfg["end_date"])
-            else:
-                bars = await fetch_yahoo(cfg["symbol"], cfg["timeframe"], cfg["start_date"], cfg["end_date"])
+            provider = get_provider(cfg.get("source"), cfg["asset_class"])
+            bars = await provider.fetch_ohlcv(
+                cfg["symbol"], cfg["timeframe"], cfg["start_date"], cfg["end_date"]
+            )
 
             if not bars:
-                raise EngineError("No data returned for the given parameters")
+                raise ValueError("No data returned for the given parameters")
 
             logs.append(f"Loaded {len(bars)} bars. Running strategy…")
-            df = _bars_to_df(bars)
-            metrics, trades, equity = run_strategy(run.strategy_code, df)
 
-            run.status = "completed"
-            run.engine = "simple"
-            run.metrics = metrics
-            run.equity_curve = _sample_equity(equity)
-            run.trades = [dict(t) for t in trades[:500]]
+            engine = get_engine(cfg["asset_class"])
+            result = await engine.run(run.strategy_code, bars)
+
+            run.status       = "completed"
+            run.engine       = result.engine
+            run.metrics      = result.metrics
+            run.equity_curve = result.equity_curve
+            run.trades       = result.trades
             run.completed_at = datetime.now(timezone.utc)
-            run.log_output = "\n".join(logs + [f"Done. {len(trades)} trades."])
+            run.log_output   = "\n".join(
+                logs + result.log_lines + [f"Done. {len(result.trades)} trades."]
+            )
 
         except Exception as exc:
-            run.status = "failed"
+            run.status        = "failed"
             run.error_message = str(exc)
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at  = datetime.now(timezone.utc)
 
         await db.commit()
 
@@ -82,24 +80,3 @@ async def _get_run(db: AsyncSession, run_id: str):
     from models.backtest_run import BacktestRun
     result = await db.execute(select(BacktestRun).where(BacktestRun.id == run_id))
     return result.scalar_one_or_none()
-
-
-def _sample_equity(equity) -> list:
-    n = len(equity)
-    if n == 0:
-        return []
-    step = max(1, n // 300)
-    sampled = equity.iloc[::step]
-    return [[str(idx), float(val)] for idx, val in sampled.items()]
-
-
-def _bars_to_df(bars) -> pd.DataFrame:
-    rows = [
-        {"timestamp": b.timestamp, "open": b.open, "high": b.high,
-         "low": b.low, "close": b.close, "volume": b.volume}
-        for b in bars
-    ]
-    df = pd.DataFrame(rows)
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-    df = df.set_index("timestamp")
-    return df

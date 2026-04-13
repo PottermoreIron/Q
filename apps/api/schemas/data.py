@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 AssetClass = Literal["crypto", "stock", "forex", "futures", "options"]
 Timeframe = Literal["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M"]
-DataSource = Literal["csv", "yahoo", "binance", "alpha_vantage", "polygon", "alpaca"]
+DataSource = Literal["csv", "yahoo", "binance", "akshare", "alpha_vantage", "polygon", "alpaca"]
 
 
 class SymbolSearchResult(BaseModel):

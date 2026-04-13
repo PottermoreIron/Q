@@ -5,10 +5,11 @@ GET  /data/search?q=BTC&asset_class=crypto          → symbol search
 GET  /data/fetch?symbol=BTC/USDT&source=binance&... → fetch OHLCV preview (first 5 bars)
 POST /data/upload                                   → upload CSV, returns file_key
 
-source options: yahoo | binance | polygon | alpha_vantage | alpaca
+source options: yahoo | binance | akshare | polygon | alpha_vantage | alpaca
 Paid sources require the corresponding API keys in .env.
 """
 
+import io
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile
@@ -20,23 +21,28 @@ from schemas.data import (
     SymbolSearchResult,
     Timeframe,
 )
-from services import data_ingestion
+from services.data.registry import get_provider
+from services.data_ingestion import parse_csv
 
 router = APIRouter(prefix="/data", tags=["data"])
 
 _SYMBOL_CATALOG: List[SymbolSearchResult] = [
-    SymbolSearchResult(symbol="BTC/USDT", name="Bitcoin / Tether", asset_class="crypto", exchange="Binance"),
-    SymbolSearchResult(symbol="ETH/USDT", name="Ethereum / Tether", asset_class="crypto", exchange="Binance"),
-    SymbolSearchResult(symbol="SOL/USDT", name="Solana / Tether", asset_class="crypto", exchange="Binance"),
-    SymbolSearchResult(symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ"),
-    SymbolSearchResult(symbol="TSLA", name="Tesla Inc.", asset_class="stock", exchange="NASDAQ"),
-    SymbolSearchResult(symbol="MSFT", name="Microsoft Corp.", asset_class="stock", exchange="NASDAQ"),
-    SymbolSearchResult(symbol="SPY", name="SPDR S&P 500 ETF", asset_class="stock", exchange="NYSE"),
-    SymbolSearchResult(symbol="QQQ", name="Invesco QQQ Trust", asset_class="stock", exchange="NASDAQ"),
-    SymbolSearchResult(symbol="EUR/USD", name="Euro / US Dollar", asset_class="forex", exchange="FX"),
-    SymbolSearchResult(symbol="GBP/USD", name="British Pound / US Dollar", asset_class="forex", exchange="FX"),
-    SymbolSearchResult(symbol="ES=F", name="E-mini S&P 500 Futures", asset_class="futures", exchange="CME"),
-    SymbolSearchResult(symbol="NQ=F", name="E-mini NASDAQ-100 Futures", asset_class="futures", exchange="CME"),
+    SymbolSearchResult(symbol="BTC/USDT",  name="Bitcoin / Tether",              asset_class="crypto",  exchange="Binance"),
+    SymbolSearchResult(symbol="ETH/USDT",  name="Ethereum / Tether",             asset_class="crypto",  exchange="Binance"),
+    SymbolSearchResult(symbol="SOL/USDT",  name="Solana / Tether",               asset_class="crypto",  exchange="Binance"),
+    SymbolSearchResult(symbol="AAPL",      name="Apple Inc.",                     asset_class="stock",   exchange="NASDAQ"),
+    SymbolSearchResult(symbol="TSLA",      name="Tesla Inc.",                     asset_class="stock",   exchange="NASDAQ"),
+    SymbolSearchResult(symbol="MSFT",      name="Microsoft Corp.",                asset_class="stock",   exchange="NASDAQ"),
+    SymbolSearchResult(symbol="SPY",       name="SPDR S&P 500 ETF",              asset_class="stock",   exchange="NYSE"),
+    SymbolSearchResult(symbol="QQQ",       name="Invesco QQQ Trust",              asset_class="stock",   exchange="NASDAQ"),
+    SymbolSearchResult(symbol="000001",    name="Ping An Bank (A-share)",         asset_class="stock",   exchange="SZSE"),
+    SymbolSearchResult(symbol="600519",    name="Kweichow Moutai (A-share)",      asset_class="stock",   exchange="SSE"),
+    SymbolSearchResult(symbol="HK00700",   name="Tencent Holdings (HK)",          asset_class="stock",   exchange="HKEX"),
+    SymbolSearchResult(symbol="HK09988",   name="Alibaba Group (HK)",             asset_class="stock",   exchange="HKEX"),
+    SymbolSearchResult(symbol="EUR/USD",   name="Euro / US Dollar",               asset_class="forex",   exchange="FX"),
+    SymbolSearchResult(symbol="GBP/USD",   name="British Pound / US Dollar",      asset_class="forex",   exchange="FX"),
+    SymbolSearchResult(symbol="ES=F",      name="E-mini S&P 500 Futures",         asset_class="futures", exchange="CME"),
+    SymbolSearchResult(symbol="NQ=F",      name="E-mini NASDAQ-100 Futures",      asset_class="futures", exchange="CME"),
 ]
 
 
@@ -54,27 +60,6 @@ async def symbol_search(
     return results[:20]
 
 
-async def _fetch_bars(
-    source: Optional[str],
-    asset_class: AssetClass,
-    symbol: str,
-    timeframe: str,
-    start_date: str,
-    end_date: str,
-):
-    """Route to the correct connector based on source (or asset_class fallback)."""
-    src = (source or "").lower()
-    if src == "polygon":
-        return await data_ingestion.fetch_polygon(symbol, timeframe, start_date, end_date)
-    if src == "alpha_vantage":
-        return await data_ingestion.fetch_alpha_vantage(symbol, timeframe, start_date, end_date)
-    if src == "alpaca":
-        return await data_ingestion.fetch_alpaca(symbol, timeframe, start_date, end_date)
-    if src == "binance" or (not src and asset_class == "crypto"):
-        return await data_ingestion.fetch_binance(symbol, timeframe, start_date, end_date)
-    return await data_ingestion.fetch_yahoo(symbol, timeframe, start_date, end_date)
-
-
 @router.get("/fetch", response_model=DataPreviewOut)
 async def fetch_preview(
     symbol: str = Query(...),
@@ -84,8 +69,9 @@ async def fetch_preview(
     end_date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
     source: Optional[str] = Query(None),
 ) -> DataPreviewOut:
+    provider = get_provider(source, asset_class)
     try:
-        bars = await _fetch_bars(source, asset_class, symbol, timeframe, start_date, end_date)
+        bars = await provider.fetch_ohlcv(symbol, timeframe, start_date, end_date)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -115,13 +101,12 @@ async def upload_csv(file: UploadFile) -> CSVUploadOut:
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
     try:
-        bars, columns = data_ingestion.parse_csv(content)
+        bars, columns = parse_csv(content)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Could not parse CSV: {exc}") from exc
 
     file_key = "local"
     try:
-        import io
         from services.storage import upload_file
         file_key = upload_file(io.BytesIO(content), prefix="uploads", suffix=".csv")
     except Exception:

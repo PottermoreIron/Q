@@ -13,7 +13,6 @@ import asyncio
 from datetime import datetime, timezone
 from typing import List, Optional
 
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,25 +21,15 @@ from database import get_db
 from models.backtest_run import BacktestRun
 from models.strategy import Strategy
 from schemas.backtest_run import BacktestRunOut, CreateRunIn, MetricsOut
-from services.data_ingestion import fetch_binance, fetch_yahoo
-from services.simple_engine import EngineError, run_strategy
+from services.data.registry import get_provider
+from services.engines.registry import get_engine
+from services.simple_engine import EngineError
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
 # Threshold: ≤ this many bars → run inline; above → Celery
 _INLINE_BAR_LIMIT = 1_000
-_MAX_EQUITY_POINTS = 300
 _MAX_TRADES = 500
-
-
-def _sample_equity(equity: "pd.Series") -> list:
-    """Downsample equity curve to at most _MAX_EQUITY_POINTS for storage."""
-    n = len(equity)
-    if n == 0:
-        return []
-    step = max(1, n // _MAX_EQUITY_POINTS)
-    sampled = equity.iloc[::step]
-    return [[str(idx), float(val)] for idx, val in sampled.items()]
 
 
 def _out(r: BacktestRun) -> BacktestRunOut:
@@ -68,17 +57,6 @@ def _out(r: BacktestRun) -> BacktestRunOut:
     )
 
 
-def _bars_to_df(bars) -> pd.DataFrame:
-    rows = [
-        {"timestamp": b.timestamp, "open": b.open, "high": b.high,
-         "low": b.low, "close": b.close, "volume": b.volume}
-        for b in bars
-    ]
-    df = pd.DataFrame(rows)
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-    return df.set_index("timestamp")
-
-
 @router.post("", response_model=BacktestRunOut, status_code=status.HTTP_201_CREATED)
 async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> BacktestRunOut:
     # Load strategy
@@ -104,19 +82,8 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
     # Fetch data to decide inline vs Celery
     try:
         src = cfg.source if hasattr(cfg, "source") else None
-        if src == "polygon":
-            from services.data_ingestion import fetch_polygon
-            bars = await fetch_polygon(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
-        elif src == "alpha_vantage":
-            from services.data_ingestion import fetch_alpha_vantage
-            bars = await fetch_alpha_vantage(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
-        elif src == "alpaca":
-            from services.data_ingestion import fetch_alpaca
-            bars = await fetch_alpaca(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
-        elif cfg.asset_class == "crypto":
-            bars = await fetch_binance(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
-        else:
-            bars = await fetch_yahoo(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
+        provider = get_provider(src, cfg.asset_class)
+        bars = await provider.fetch_ohlcv(cfg.symbol, cfg.timeframe, cfg.start_date, cfg.end_date)
     except ValueError as exc:
         run.status = "failed"
         run.error_message = str(exc)
@@ -143,18 +110,18 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
         await db.commit()
 
         try:
-            df = _bars_to_df(bars)
-            metrics, trades, equity = run_strategy(strategy.python_code, df)
+            engine = get_engine(cfg.asset_class)
+            result = await engine.run(strategy.python_code, bars)
 
-            run.status = "completed"
-            run.engine = "simple"
-            run.metrics = metrics
-            run.equity_curve = _sample_equity(equity)
-            run.trades = [dict(t) for t in trades[:_MAX_TRADES]]
-            run.log_output = f"Ran {len(bars)} bars inline. {len(trades)} trades."
+            run.status       = "completed"
+            run.engine       = result.engine
+            run.metrics      = result.metrics
+            run.equity_curve = result.equity_curve
+            run.trades       = result.trades
+            run.log_output   = f"Ran {len(bars)} bars inline. {len(result.trades)} trades."
             run.completed_at = datetime.now(timezone.utc)
 
-        except EngineError as exc:
+        except (EngineError, Exception) as exc:
             run.status = "failed"
             run.error_message = str(exc)
             run.completed_at = datetime.now(timezone.utc)
@@ -176,16 +143,16 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
             run.status = "running"
             await db.commit()
             try:
-                df = _bars_to_df(bars)
-                metrics, trades, equity = run_strategy(strategy.python_code, df)
-                run.status = "completed"
-                run.engine = "simple"
-                run.metrics = metrics
-                run.equity_curve = _sample_equity(equity)
-                run.trades = [dict(t) for t in trades[:_MAX_TRADES]]
-                run.log_output = f"Ran {len(bars)} bars (Celery unavailable, ran inline). {len(trades)} trades."
+                engine = get_engine(cfg.asset_class)
+                result = await engine.run(strategy.python_code, bars)
+                run.status       = "completed"
+                run.engine       = result.engine
+                run.metrics      = result.metrics
+                run.equity_curve = result.equity_curve
+                run.trades       = result.trades
+                run.log_output   = f"Ran {len(bars)} bars (Celery unavailable, ran inline). {len(result.trades)} trades."
                 run.completed_at = datetime.now(timezone.utc)
-            except EngineError as exc:
+            except (EngineError, Exception) as exc:
                 run.status = "failed"
                 run.error_message = str(exc)
                 run.completed_at = datetime.now(timezone.utc)

@@ -1,26 +1,23 @@
 """
-Unit tests for paid data connectors and cache key helpers.
+Unit tests for paid data provider classes and cache key helpers.
 
 All external HTTP calls are mocked — no live API keys required.
 Redis cache is bypassed (cache_get returns None, cache_set is a no-op).
-
-settings is patched at config.settings because the connectors import it
-via `from config import settings` inside the function body.
 """
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.data_ingestion import (
-    _cache_key,
-    fetch_alpha_vantage,
-    fetch_alpaca,
-    fetch_polygon,
-)
+from services.data.protocol import make_cache_key
+from services.data.providers.alpha_vantage import AlphaVantageProvider
+from services.data.providers.alpaca import AlpacaProvider
+from services.data.providers.polygon import PolygonProvider
+
+_CACHE_MODULE = "services.data.protocol"
 
 _NO_CACHE = {
-    "services.data_ingestion._cache_get": dict(new_callable=AsyncMock, return_value=None),
-    "services.data_ingestion._cache_set": dict(new_callable=AsyncMock),
+    f"{_CACHE_MODULE}.cache_get": dict(new_callable=AsyncMock, return_value=None),
+    f"{_CACHE_MODULE}.cache_set": dict(new_callable=AsyncMock),
 }
 
 
@@ -52,28 +49,28 @@ def _mock_http_client(*responses):
     return client
 
 
-# ── Cache key stability ────────────────────────────────────────────────────────
+# ── Cache key stability ───────────────────────────────────────────────────────
 
 def test_cache_key_stable():
-    k1 = _cache_key("yahoo", "AAPL", "1d", "2023-01-01", "2023-12-31")
-    k2 = _cache_key("yahoo", "AAPL", "1d", "2023-01-01", "2023-12-31")
+    k1 = make_cache_key("yahoo", "AAPL", "1d", "2023-01-01", "2023-12-31")
+    k2 = make_cache_key("yahoo", "AAPL", "1d", "2023-01-01", "2023-12-31")
     assert k1 == k2
     assert k1.startswith("ohlcv:")
 
 
 def test_cache_key_differs_by_source():
-    k_yahoo   = _cache_key("yahoo",   "AAPL", "1d", "2023-01-01", "2023-12-31")
-    k_polygon = _cache_key("polygon", "AAPL", "1d", "2023-01-01", "2023-12-31")
+    k_yahoo   = make_cache_key("yahoo",   "AAPL", "1d", "2023-01-01", "2023-12-31")
+    k_polygon = make_cache_key("polygon", "AAPL", "1d", "2023-01-01", "2023-12-31")
     assert k_yahoo != k_polygon
 
 
 def test_cache_key_differs_by_symbol():
-    k1 = _cache_key("yahoo", "AAPL", "1d", "2023-01-01", "2023-12-31")
-    k2 = _cache_key("yahoo", "MSFT", "1d", "2023-01-01", "2023-12-31")
+    k1 = make_cache_key("yahoo", "AAPL", "1d", "2023-01-01", "2023-12-31")
+    k2 = make_cache_key("yahoo", "MSFT", "1d", "2023-01-01", "2023-12-31")
     assert k1 != k2
 
 
-# ── Polygon connector ──────────────────────────────────────────────────────────
+# ── Polygon ───────────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
 async def test_fetch_polygon_returns_bars():
@@ -85,11 +82,13 @@ async def test_fetch_polygon_returns_bars():
     }
     settings = _mock_settings(polygon_api_key="test-key")
 
-    with patch("services.data_ingestion._cache_get", new_callable=AsyncMock, return_value=None), \
-         patch("services.data_ingestion._cache_set", new_callable=AsyncMock), \
+    with patch(f"{_CACHE_MODULE}.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch(f"{_CACHE_MODULE}.cache_set", new_callable=AsyncMock), \
+         patch("services.data.providers.polygon.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch("services.data.providers.polygon.cache_set", new_callable=AsyncMock), \
          patch("config.settings", settings), \
          patch("httpx.AsyncClient", return_value=_mock_http_client(response)):
-        bars = await fetch_polygon("AAPL", "1d", "2023-01-01", "2023-12-31")
+        bars = await PolygonProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
     assert len(bars) == 2
     assert bars[0].open == 130.0
@@ -101,7 +100,7 @@ async def test_fetch_polygon_no_api_key():
     settings = _mock_settings(polygon_api_key="")
     with patch("config.settings", settings):
         with pytest.raises(ValueError, match="POLYGON_API_KEY"):
-            await fetch_polygon("AAPL", "1d", "2023-01-01", "2023-12-31")
+            await PolygonProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
 
 @pytest.mark.asyncio
@@ -116,17 +115,17 @@ async def test_fetch_polygon_pagination():
     settings = _mock_settings(polygon_api_key="test-key")
     client = _mock_http_client(page1, page2)
 
-    with patch("services.data_ingestion._cache_get", new_callable=AsyncMock, return_value=None), \
-         patch("services.data_ingestion._cache_set", new_callable=AsyncMock), \
+    with patch("services.data.providers.polygon.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch("services.data.providers.polygon.cache_set", new_callable=AsyncMock), \
          patch("config.settings", settings), \
          patch("httpx.AsyncClient", return_value=client):
-        bars = await fetch_polygon("AAPL", "1d", "2023-01-01", "2023-12-31")
+        bars = await PolygonProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
     assert len(bars) == 2
     assert client.get.call_count == 2
 
 
-# ── Alpha Vantage connector ───────────────────────────────────────────────────
+# ── Alpha Vantage ─────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
 async def test_fetch_alpha_vantage_returns_bars():
@@ -144,14 +143,13 @@ async def test_fetch_alpha_vantage_returns_bars():
     }
     settings = _mock_settings(alpha_vantage_api_key="test-key")
 
-    with patch("services.data_ingestion._cache_get", new_callable=AsyncMock, return_value=None), \
-         patch("services.data_ingestion._cache_set", new_callable=AsyncMock), \
+    with patch("services.data.providers.alpha_vantage.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch("services.data.providers.alpha_vantage.cache_set", new_callable=AsyncMock), \
          patch("config.settings", settings), \
          patch("httpx.AsyncClient", return_value=_mock_http_client(response)):
-        bars = await fetch_alpha_vantage("AAPL", "1d", "2023-01-01", "2023-12-31")
+        bars = await AlphaVantageProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
     assert len(bars) == 2
-    # sorted ascending by date
     assert bars[0].close == pytest.approx(179.80)
     assert bars[1].close == pytest.approx(181.50)
 
@@ -161,7 +159,7 @@ async def test_fetch_alpha_vantage_no_api_key():
     settings = _mock_settings(alpha_vantage_api_key="")
     with patch("config.settings", settings):
         with pytest.raises(ValueError, match="ALPHA_VANTAGE_API_KEY"):
-            await fetch_alpha_vantage("AAPL", "1d", "2023-01-01", "2023-12-31")
+            await AlphaVantageProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
 
 @pytest.mark.asyncio
@@ -169,15 +167,15 @@ async def test_fetch_alpha_vantage_rate_limit_error():
     response = {"Note": "Thank you for using Alpha Vantage! Our standard API call frequency is 5 calls per minute."}
     settings = _mock_settings(alpha_vantage_api_key="test-key")
 
-    with patch("services.data_ingestion._cache_get", new_callable=AsyncMock, return_value=None), \
-         patch("services.data_ingestion._cache_set", new_callable=AsyncMock), \
+    with patch("services.data.providers.alpha_vantage.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch("services.data.providers.alpha_vantage.cache_set", new_callable=AsyncMock), \
          patch("config.settings", settings), \
          patch("httpx.AsyncClient", return_value=_mock_http_client(response)):
-        with pytest.raises(ValueError, match="Alpha Vantage error"):
-            await fetch_alpha_vantage("AAPL", "1d", "2023-01-01", "2023-12-31")
+        with pytest.raises(ValueError, match="Alpha Vantage"):
+            await AlphaVantageProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
 
-# ── Alpaca connector ──────────────────────────────────────────────────────────
+# ── Alpaca ────────────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
 async def test_fetch_alpaca_returns_bars():
@@ -193,11 +191,11 @@ async def test_fetch_alpaca_returns_bars():
         alpaca_base_url="https://data.alpaca.markets",
     )
 
-    with patch("services.data_ingestion._cache_get", new_callable=AsyncMock, return_value=None), \
-         patch("services.data_ingestion._cache_set", new_callable=AsyncMock), \
+    with patch("services.data.providers.alpaca.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch("services.data.providers.alpaca.cache_set", new_callable=AsyncMock), \
          patch("config.settings", settings), \
          patch("httpx.AsyncClient", return_value=_mock_http_client(response)):
-        bars = await fetch_alpaca("AAPL", "1d", "2023-01-01", "2023-12-31")
+        bars = await AlpacaProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
     assert len(bars) == 2
     assert bars[0].open == pytest.approx(130.28)
@@ -209,7 +207,7 @@ async def test_fetch_alpaca_no_api_key():
     settings = _mock_settings(alpaca_api_key="", alpaca_api_secret="")
     with patch("config.settings", settings):
         with pytest.raises(ValueError, match="ALPACA_API_KEY"):
-            await fetch_alpaca("AAPL", "1d", "2023-01-01", "2023-12-31")
+            await AlpacaProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
 
 @pytest.mark.asyncio
@@ -228,11 +226,11 @@ async def test_fetch_alpaca_pagination():
     )
     client = _mock_http_client(page1, page2)
 
-    with patch("services.data_ingestion._cache_get", new_callable=AsyncMock, return_value=None), \
-         patch("services.data_ingestion._cache_set", new_callable=AsyncMock), \
+    with patch("services.data.providers.alpaca.cache_get", new_callable=AsyncMock, return_value=None), \
+         patch("services.data.providers.alpaca.cache_set", new_callable=AsyncMock), \
          patch("config.settings", settings), \
          patch("httpx.AsyncClient", return_value=client):
-        bars = await fetch_alpaca("AAPL", "1d", "2023-01-01", "2023-12-31")
+        bars = await AlpacaProvider().fetch_ohlcv("AAPL", "1d", "2023-01-01", "2023-12-31")
 
     assert len(bars) == 2
     assert client.get.call_count == 2
