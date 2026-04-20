@@ -159,7 +159,7 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-1.5 bg-ink text-white text-body font-medium rounded-md disabled:opacity-50 active:scale-[0.97] transition-transform duration-[80ms]"
+            className="px-4 py-1.5 w-20 bg-ink text-white text-body font-medium rounded-md disabled:opacity-50 active:scale-[0.97] transition-transform duration-[80ms]"
           >
             {saving ? "Saving…" : "Save"}
           </button>

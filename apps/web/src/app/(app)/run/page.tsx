@@ -173,7 +173,11 @@ export default function RunPage() {
             <input
               type="text"
               value={symbol}
-              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                const v = e.target.value.toUpperCase();
+                setSymbol(v);
+                if (v.includes("/")) setAssetClass("crypto");
+              }}
               placeholder="AAPL"
               required
               className="w-full px-3 py-2 bg-surface border border-border rounded-md text-small text-[#191919] placeholder:text-muted focus:outline-none focus:border-[#37352F] transition-colors duration-[80ms]"

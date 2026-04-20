@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useState } from "react";
 import { data as dataApi, type AssetClass, type DataPreview, type SymbolResult, type Timeframe } from "@/lib/api";
 
 const ASSET_CLASSES: { value: AssetClass; label: string }[] = [
@@ -19,9 +19,10 @@ const TIMEFRAMES: { value: Timeframe; label: string }[] = [
 ];
 
 const SOURCES = [
-  { value: "csv", label: "CSV Upload" },
-  { value: "yahoo", label: "Yahoo Finance" },
+  { value: "csv",     label: "CSV Upload" },
+  { value: "yahoo",   label: "Yahoo Finance" },
   { value: "binance", label: "Binance" },
+  { value: "akshare", label: "AkShare" },
 ];
 
 export default function DataPage() {
@@ -37,7 +38,7 @@ export default function DataPage() {
 
   const [preview, setPreview] = useState<DataPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   const handleSearch = useCallback(async (q: string) => {
     setQuery(q);
@@ -57,36 +58,38 @@ export default function DataPage() {
     setSearchResults([]);
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     if (!selectedSymbol) return;
     setError(null);
-    startTransition(async () => {
-      try {
-        const result = await dataApi.fetch({
-          symbol: selectedSymbol.symbol,
-          asset_class: selectedSymbol.asset_class,
-          timeframe,
-          start_date: startDate,
-          end_date: endDate,
-        });
-        setPreview(result);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to fetch data");
-      }
-    });
+    setIsPending(true);
+    try {
+      const result = await dataApi.fetch({
+        symbol: selectedSymbol.symbol,
+        asset_class: selectedSymbol.asset_class,
+        timeframe,
+        start_date: startDate,
+        end_date: endDate,
+      });
+      setPreview(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to fetch data");
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    startTransition(async () => {
-      try {
-        await dataApi.upload(file);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Upload failed");
-      }
-    });
+    setIsPending(true);
+    try {
+      await dataApi.upload(file);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
