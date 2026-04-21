@@ -94,12 +94,12 @@ def df_to_bars(df: "pd.DataFrame") -> list[OHLCVBar]:
 
     # Parse to UTC-aware, then to int64 ms
     parsed = pd.to_datetime(df[ts_col], utc=True)
-    df["_ts_ms"] = parsed.astype("int64") // 1_000_000
+    df["ts_ms"] = parsed.astype("int64") // 1_000_000
 
     bars: list[OHLCVBar] = []
     for row in df.itertuples(index=False):
         bars.append(OHLCVBar(
-            timestamp=int(row._ts_ms),  # noqa: SLF001
+            timestamp=int(row.ts_ms),
             open=float(row.open),
             high=float(row.high),
             low=float(row.low),

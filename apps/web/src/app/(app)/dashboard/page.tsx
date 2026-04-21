@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   strategies as strategiesApi,
   backtests as backteststApi,
   type Strategy,
   type BacktestRun,
 } from "@/lib/api";
+import { ErrorBanner } from "@/components/ErrorBanner";
+import { formatApiError } from "@/lib/format-api-error";
 
 function fmt(n: number | null | undefined, decimals = 2): string {
   if (n == null) return "—";
@@ -19,25 +21,41 @@ function fmtPct(n: number | null | undefined): string {
 }
 function fmtCurrency(n: number | null | undefined): string {
   if (n == null) return "—";
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return (
+    "$" +
+    n.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+  );
 }
 
 export default function DashboardPage() {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
-  const [runs, setRuns]             = useState<BacktestRun[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [runs, setRuns] = useState<BacktestRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadDashboard = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     Promise.all([strategiesApi.list(), backteststApi.list()])
       .then(([s, r]) => {
         setStrategies(s);
         setRuns(r);
       })
+      .catch((err: unknown) => {
+        setLoadError(formatApiError(err, "Failed to load dashboard data."));
+      })
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
   const completedRuns = runs.filter((r) => r.status === "completed");
-  const recentRuns    = runs.slice(0, 5);
+  const recentRuns = runs.slice(0, 5);
 
   // Best run by Sharpe
   const bestRun = completedRuns.reduce<BacktestRun | null>((best, r) => {
@@ -51,8 +69,12 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-baseline justify-between">
         <div>
-          <h1 className="font-serif italic text-display text-ink mb-1">Dashboard</h1>
-          <p className="text-body text-muted">Overview of your strategies and runs.</p>
+          <h1 className="font-serif italic text-display text-ink mb-1">
+            Dashboard
+          </h1>
+          <p className="text-body text-muted">
+            Overview of your strategies and runs.
+          </p>
         </div>
         <Link
           href="/strategies/new"
@@ -68,6 +90,8 @@ export default function DashboardPage() {
             <div key={i} className="h-24 bg-border rounded-lg animate-pulse" />
           ))}
         </div>
+      ) : loadError ? (
+        <ErrorBanner message={loadError} onRetry={loadDashboard} />
       ) : (
         <>
           {/* Stats row */}
@@ -87,7 +111,11 @@ export default function DashboardPage() {
             <StatCard
               label="Best Sharpe"
               value={fmt(bestRun?.metrics?.sharpe_ratio)}
-              sub={bestRun ? `${bestRun.strategy_name} · ${bestRun.data_config.symbol}` : "no runs yet"}
+              sub={
+                bestRun
+                  ? `${bestRun.strategy_name} · ${bestRun.data_config.symbol}`
+                  : "no runs yet"
+              }
               href="/results"
             />
           </div>
@@ -95,15 +123,22 @@ export default function DashboardPage() {
           {/* Recent runs */}
           <div>
             <div className="flex items-baseline justify-between mb-4">
-              <h2 className="font-serif italic text-title text-ink">Recent runs</h2>
-              <Link href="/results" className="text-small text-muted hover:text-body transition-colors duration-[80ms]">
+              <h2 className="font-serif italic text-title text-ink">
+                Recent runs
+              </h2>
+              <Link
+                href="/results"
+                className="text-small text-muted hover:text-body transition-colors duration-[80ms]"
+              >
                 View all →
               </Link>
             </div>
 
             {recentRuns.length === 0 ? (
               <div className="py-10 text-center border border-border rounded-lg">
-                <p className="font-serif italic text-title text-muted mb-3">No runs yet.</p>
+                <p className="font-serif italic text-title text-muted mb-3">
+                  No runs yet.
+                </p>
                 <Link
                   href="/run"
                   className="px-4 py-2 bg-ink text-white text-body font-medium rounded-md"
@@ -123,15 +158,22 @@ export default function DashboardPage() {
           {/* Strategies */}
           <div>
             <div className="flex items-baseline justify-between mb-4">
-              <h2 className="font-serif italic text-title text-ink">Strategies</h2>
-              <Link href="/strategies" className="text-small text-muted hover:text-body transition-colors duration-[80ms]">
+              <h2 className="font-serif italic text-title text-ink">
+                Strategies
+              </h2>
+              <Link
+                href="/strategies"
+                className="text-small text-muted hover:text-body transition-colors duration-[80ms]"
+              >
                 View all →
               </Link>
             </div>
 
             {strategies.length === 0 ? (
               <div className="py-10 text-center border border-border rounded-lg">
-                <p className="font-serif italic text-title text-muted mb-3">No strategies yet.</p>
+                <p className="font-serif italic text-title text-muted mb-3">
+                  No strategies yet.
+                </p>
                 <Link
                   href="/strategies/new"
                   className="px-4 py-2 bg-ink text-white text-body font-medium rounded-md"
@@ -155,12 +197,15 @@ export default function DashboardPage() {
                         {s.name}
                       </Link>
                       {s.description && (
-                        <p className="text-small text-muted mt-0.5">{s.description}</p>
+                        <p className="text-small text-muted mt-0.5">
+                          {s.description}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-small text-muted">
-                        {s.blocks.length} block{s.blocks.length !== 1 ? "s" : ""}
+                        {s.blocks.length} block
+                        {s.blocks.length !== 1 ? "s" : ""}
                       </span>
                       <Link
                         href={`/run?strategy_id=${s.id}`}
@@ -206,10 +251,10 @@ function StatCard({
 function RunRow({ run, idx }: { run: BacktestRun; idx: number }) {
   const m = run.metrics;
   const statusColor: Record<BacktestRun["status"], string> = {
-    pending:   "text-muted",
-    running:   "text-[#1a6fa8]",
+    pending: "text-muted",
+    running: "text-[#1a6fa8]",
     completed: "text-positive",
-    failed:    "text-negative",
+    failed: "text-negative",
   };
 
   return (
@@ -237,7 +282,9 @@ function RunRow({ run, idx }: { run: BacktestRun; idx: number }) {
             </div>
             <div>
               <p className="text-small text-muted">Max DD</p>
-              <p className={`text-body ${m.max_drawdown != null && m.max_drawdown < 0 ? "text-negative" : "text-ink"}`}>
+              <p
+                className={`text-body ${m.max_drawdown != null && m.max_drawdown < 0 ? "text-negative" : "text-ink"}`}
+              >
                 {fmtPct(m.max_drawdown)}
               </p>
             </div>

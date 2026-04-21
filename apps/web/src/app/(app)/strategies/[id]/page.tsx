@@ -2,16 +2,29 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { strategies as api, type Strategy, type StrategyBlock } from "@/lib/api";
-import { BLOCK_BY_NAME, BLOCK_CATALOG, BLOCKS_BY_TYPE, type BlockDef } from "@/lib/block-catalog";
+import {
+  strategies as api,
+  type Strategy,
+  type StrategyBlock,
+} from "@/lib/api";
+import {
+  BLOCK_BY_NAME,
+  BLOCK_CATALOG,
+  BLOCKS_BY_TYPE,
+  type BlockDef,
+} from "@/lib/block-catalog";
+import { ErrorBanner } from "@/components/ErrorBanner";
+import { formatApiError } from "@/lib/format-api-error";
 
 // Monaco is large — load it lazily so the page shell renders immediately
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+});
 
 const TYPE_LABEL: Record<string, string> = {
   indicator: "Indicators",
   condition: "Conditions",
-  action:    "Risk",
+  action: "Risk",
 };
 
 const TYPE_ORDER = ["indicator", "condition", "action"] as const;
@@ -25,7 +38,11 @@ function newBlock(def: BlockDef): StrategyBlock {
   };
 }
 
-export default function StrategyBuilderPage({ params }: { params: { id: string } }) {
+export default function StrategyBuilderPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const isNew = params.id === "new";
 
   const [strategy, setStrategy] = useState<Strategy | null>(null);
@@ -36,30 +53,58 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
   const [codeManual, setCodeManual] = useState(false); // user edited code directly
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [paletteOpen, setPaletteOpen] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load existing strategy
-  useEffect(() => {
+  const loadStrategy = useCallback(() => {
+    setLoadError(null);
     if (!isNew) {
-      api.get(params.id).then((s) => {
-        setStrategy(s);
-        setName(s.name);
-        setBlocks(s.blocks as StrategyBlock[]);
-        setCode(s.python_code ?? "");
-      });
+      api
+        .get(params.id)
+        .then((s) => {
+          setStrategy(s);
+          setName(s.name);
+          setBlocks(s.blocks as StrategyBlock[]);
+          setCode(s.python_code ?? "");
+        })
+        .catch((err: unknown) => {
+          setLoadError(formatApiError(err, "Failed to load strategy."));
+        });
     } else {
-      api.compile([]).then((r) => setCode(r.python_code));
+      api
+        .compile([])
+        .then((r) => {
+          setCode(r.python_code);
+        })
+        .catch((err: unknown) => {
+          setLoadError(
+            formatApiError(err, "Failed to initialize strategy template."),
+          );
+        });
     }
   }, [params.id, isNew]);
 
+  // Load existing strategy
+  useEffect(() => {
+    void loadStrategy();
+  }, [loadStrategy]);
+
   // When blocks change (and user hasn't manually edited code), recompile
-  const recompile = useCallback(async (newBlocks: StrategyBlock[]) => {
-    if (codeManual) return;
-    const result = await api.compile(newBlocks);
-    setCode(result.python_code);
-  }, [codeManual]);
+  const recompile = useCallback(
+    async (newBlocks: StrategyBlock[]) => {
+      if (codeManual) return;
+      try {
+        const result = await api.compile(newBlocks);
+        setCode(result.python_code);
+        setValidationErrors([]);
+      } catch (err: unknown) {
+        setValidationErrors([formatApiError(err, "Failed to compile blocks.")]);
+      }
+    },
+    [codeManual],
+  );
 
   const handleAddBlock = (def: BlockDef) => {
     const block = newBlock(def);
@@ -76,7 +121,9 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
   };
 
   const handleParamChange = (blockId: string, key: string, value: unknown) => {
-    const next = blocks.map((b) => b.id === blockId ? { ...b, params: { ...b.params, [key]: value } } : b);
+    const next = blocks.map((b) =>
+      b.id === blockId ? { ...b, params: { ...b.params, [key]: value } } : b,
+    );
     setBlocks(next);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => recompile(next), 400);
@@ -89,8 +136,12 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
     // Debounced validation
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      const result = await api.validate(v);
-      setValidationErrors(result.errors);
+      try {
+        const result = await api.validate(v);
+        setValidationErrors(result.errors);
+      } catch (err: unknown) {
+        setValidationErrors([formatApiError(err, "Validation failed.")]);
+      }
     }, 600);
   };
 
@@ -113,7 +164,7 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
         setStrategy(s);
       }
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Save failed");
+      setSaveError(formatApiError(e, "Save failed"));
     } finally {
       setSaving(false);
     }
@@ -137,7 +188,9 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
               key={m}
               onClick={() => setMode(m)}
               className={`px-3 py-1 text-small font-medium rounded-sm transition-colors duration-[80ms] capitalize ${
-                mode === m ? "bg-surface text-ink shadow-float" : "text-muted hover:text-body"
+                mode === m
+                  ? "bg-surface text-ink shadow-float"
+                  : "text-muted hover:text-body"
               }`}
             >
               {m === "blocks" ? "Blocks" : "Python"}
@@ -147,7 +200,10 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
 
         {codeManual && mode === "code" && (
           <button
-            onClick={() => { setCodeManual(false); recompile(blocks); }}
+            onClick={() => {
+              setCodeManual(false);
+              recompile(blocks);
+            }}
             className="text-small text-muted hover:text-body transition-colors duration-[80ms]"
           >
             ← Reset to blocks
@@ -155,7 +211,14 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
         )}
 
         <div className="ml-auto flex items-center gap-3">
-          {saveError && <span className="text-small text-negative">{saveError}</span>}
+          {loadError && (
+            <ErrorBanner
+              message={loadError}
+              variant="inline"
+              onRetry={loadStrategy}
+            />
+          )}
+          {saveError && <ErrorBanner message={saveError} variant="inline" />}
           <button
             onClick={handleSave}
             disabled={saving}
@@ -173,15 +236,21 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
             <div className="p-4 space-y-5">
               {/* Add block palette */}
               <div>
-                <p className="text-label uppercase tracking-widest text-muted mb-3">Add Block</p>
+                <p className="text-label uppercase tracking-widest text-muted mb-3">
+                  Add Block
+                </p>
                 {TYPE_ORDER.map((type) => (
                   <div key={type} className="mb-3">
                     <button
-                      onClick={() => setPaletteOpen(paletteOpen === type ? null : type)}
+                      onClick={() =>
+                        setPaletteOpen(paletteOpen === type ? null : type)
+                      }
                       className="w-full flex items-center justify-between text-heading font-medium text-body hover:text-ink transition-colors duration-[80ms] mb-1"
                     >
                       <span>{TYPE_LABEL[type]}</span>
-                      <span className="text-muted text-small">{paletteOpen === type ? "−" : "+"}</span>
+                      <span className="text-muted text-small">
+                        {paletteOpen === type ? "−" : "+"}
+                      </span>
                     </button>
                     {paletteOpen === type && (
                       <div className="space-y-1 pl-2 animate-slide-in-left">
@@ -191,8 +260,12 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
                             onClick={() => handleAddBlock(def)}
                             className="w-full text-left px-3 py-2 rounded-md text-body hover:bg-background transition-colors duration-[80ms] group"
                           >
-                            <span className="font-medium text-ink">{def.label}</span>
-                            <span className="block text-small text-muted">{def.description}</span>
+                            <span className="font-medium text-ink">
+                              {def.label}
+                            </span>
+                            <span className="block text-small text-muted">
+                              {def.description}
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -204,14 +277,21 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
               {/* Current blocks */}
               {blocks.length > 0 && (
                 <div>
-                  <p className="text-label uppercase tracking-widest text-muted mb-3">Strategy ({blocks.length})</p>
+                  <p className="text-label uppercase tracking-widest text-muted mb-3">
+                    Strategy ({blocks.length})
+                  </p>
                   <div className="space-y-2">
                     {blocks.map((block) => {
                       const def = BLOCK_BY_NAME[block.name];
                       return (
-                        <div key={block.id} className="bg-background border border-border rounded-md p-3 animate-slide-in-left">
+                        <div
+                          key={block.id}
+                          className="bg-background border border-border rounded-md p-3 animate-slide-in-left"
+                        >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-body font-medium text-ink">{def?.label ?? block.name}</span>
+                            <span className="text-body font-medium text-ink">
+                              {def?.label ?? block.name}
+                            </span>
                             <button
                               onClick={() => handleRemoveBlock(block.id)}
                               className="text-small text-muted hover:text-negative transition-colors duration-[80ms]"
@@ -220,14 +300,25 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
                             </button>
                           </div>
                           {def?.paramDefs.map((pd) => (
-                            <div key={pd.key} className="flex items-center justify-between mt-1">
-                              <label className="text-small text-muted">{pd.label}</label>
+                            <div
+                              key={pd.key}
+                              className="flex items-center justify-between mt-1"
+                            >
+                              <label className="text-small text-muted">
+                                {pd.label}
+                              </label>
                               <input
                                 type="number"
                                 value={block.params[pd.key] as number}
                                 min={pd.min}
                                 max={pd.max}
-                                onChange={(e) => handleParamChange(block.id, pd.key, parseFloat(e.target.value))}
+                                onChange={(e) =>
+                                  handleParamChange(
+                                    block.id,
+                                    pd.key,
+                                    parseFloat(e.target.value),
+                                  )
+                                }
                                 className="w-16 text-right text-small text-ink bg-surface border border-border rounded px-1.5 py-0.5 outline-none focus:border-body transition-colors duration-[80ms]"
                               />
                             </div>
@@ -247,24 +338,31 @@ export default function StrategyBuilderPage({ params }: { params: { id: string }
             </div>
           ) : (
             <div className="p-4">
-              <p className="text-label uppercase tracking-widest text-muted mb-3">Validation</p>
+              <p className="text-label uppercase tracking-widest text-muted mb-3">
+                Validation
+              </p>
               {validationErrors.length === 0 ? (
                 <p className="text-small text-positive">✓ No issues</p>
               ) : (
                 <ul className="space-y-1">
                   {validationErrors.map((e, i) => (
-                    <li key={i} className="text-small text-negative">{e}</li>
+                    <li key={i} className="text-small text-negative">
+                      {e}
+                    </li>
                   ))}
                 </ul>
               )}
 
               <div className="mt-6">
-                <p className="text-label uppercase tracking-widest text-muted mb-3">Block Catalog</p>
+                <p className="text-label uppercase tracking-widest text-muted mb-3">
+                  Block Catalog
+                </p>
                 <div className="space-y-1">
                   {BLOCK_CATALOG.map((def) => (
                     <div key={def.name} className="text-small text-muted">
                       <span className="text-ink font-medium">{def.label}</span>
-                      {" — "}{def.description}
+                      {" — "}
+                      {def.description}
                     </div>
                   ))}
                 </div>

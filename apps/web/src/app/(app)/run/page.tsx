@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   strategies as strategiesApi,
   backtests as backteststApi,
@@ -13,23 +13,25 @@ import {
 } from "@/lib/api";
 import { Select } from "@/components/Select";
 import { SegmentedControl } from "@/components/SegmentedControl";
+import { ErrorBanner } from "@/components/ErrorBanner";
+import { formatApiError } from "@/lib/format-api-error";
 
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
-  { value: "1m",  label: "1 min"   },
-  { value: "5m",  label: "5 min"   },
-  { value: "15m", label: "15 min"  },
-  { value: "30m", label: "30 min"  },
-  { value: "1h",  label: "1 hour"  },
-  { value: "4h",  label: "4 hours" },
-  { value: "1d",  label: "1 day"   },
-  { value: "1w",  label: "1 week"  },
-  { value: "1M",  label: "1 month" },
+  { value: "1m", label: "1 min" },
+  { value: "5m", label: "5 min" },
+  { value: "15m", label: "15 min" },
+  { value: "30m", label: "30 min" },
+  { value: "1h", label: "1 hour" },
+  { value: "4h", label: "4 hours" },
+  { value: "1d", label: "1 day" },
+  { value: "1w", label: "1 week" },
+  { value: "1M", label: "1 month" },
 ];
 
 const ASSET_CLASSES: { value: AssetClass; label: string }[] = [
-  { value: "stock",   label: "Stock"   },
-  { value: "crypto",  label: "Crypto"  },
-  { value: "forex",   label: "Forex"   },
+  { value: "stock", label: "Stock" },
+  { value: "crypto", label: "Crypto" },
+  { value: "forex", label: "Forex" },
   { value: "futures", label: "Futures" },
 ];
 
@@ -45,13 +47,15 @@ function fmtPct(n: number | null | undefined): string {
 
 function statusPill(status: BacktestRun["status"]) {
   const map: Record<BacktestRun["status"], string> = {
-    pending:   "bg-[#f0f0ef] text-[#6f6f6e]",
-    running:   "bg-[#e8f4fd] text-[#1a6fa8]",
+    pending: "bg-[#f0f0ef] text-[#6f6f6e]",
+    running: "bg-[#e8f4fd] text-[#1a6fa8]",
     completed: "bg-[#edf7ed] text-[#2d7a2d]",
-    failed:    "bg-[#fdecea] text-[#c0392b]",
+    failed: "bg-[#fdecea] text-[#c0392b]",
   };
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-small font-medium ${map[status]}`}>
+    <span
+      className={`inline-block px-2 py-0.5 rounded text-small font-medium ${map[status]}`}
+    >
       {status}
     </span>
   );
@@ -59,20 +63,21 @@ function statusPill(status: BacktestRun["status"]) {
 
 export default function RunPage() {
   const [strategyList, setStrategyList] = useState<Strategy[]>([]);
-  const [runs, setRuns]                 = useState<BacktestRun[]>([]);
+  const [runs, setRuns] = useState<BacktestRun[]>([]);
   const [loadingStrategies, setLoadingStrategies] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // form state
   const [strategyId, setStrategyId] = useState("");
-  const [symbol,     setSymbol]     = useState("AAPL");
+  const [symbol, setSymbol] = useState("AAPL");
   const [assetClass, setAssetClass] = useState<AssetClass>("stock");
-  const [timeframe,  setTimeframe]  = useState<Timeframe>("1d");
-  const [startDate,  setStartDate]  = useState("2023-01-01");
-  const [endDate,    setEndDate]    = useState("2023-12-31");
+  const [timeframe, setTimeframe] = useState<Timeframe>("1d");
+  const [startDate, setStartDate] = useState("2023-01-01");
+  const [endDate, setEndDate] = useState("2023-12-31");
 
   // submission state
   const [submitting, setSubmitting] = useState(false);
-  const [runError,   setRunError]   = useState<string | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   // selected run for detail view
   const [selectedRun, setSelectedRun] = useState<BacktestRun | null>(null);
@@ -80,10 +85,26 @@ export default function RunPage() {
   // polling
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    strategiesApi.list().then(setStrategyList).finally(() => setLoadingStrategies(false));
-    backteststApi.list().then(setRuns);
+  const loadInitialData = useCallback(async () => {
+    setLoadingStrategies(true);
+    setLoadError(null);
+    try {
+      const [strategies, backtests] = await Promise.all([
+        strategiesApi.list(),
+        backteststApi.list(),
+      ]);
+      setStrategyList(strategies);
+      setRuns(backtests);
+    } catch (err: unknown) {
+      setLoadError(formatApiError(err, "Failed to load run page data."));
+    } finally {
+      setLoadingStrategies(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadInitialData();
+  }, [loadInitialData]);
 
   function stopPolling() {
     if (pollRef.current) {
@@ -95,10 +116,15 @@ export default function RunPage() {
   function startPolling(runId: string) {
     stopPolling();
     pollRef.current = setInterval(async () => {
-      const updated = await backteststApi.get(runId);
-      setRuns((prev) => prev.map((r) => (r.id === runId ? updated : r)));
-      setSelectedRun((prev) => (prev?.id === runId ? updated : prev));
-      if (updated.status === "completed" || updated.status === "failed") {
+      try {
+        const updated = await backteststApi.get(runId);
+        setRuns((prev) => prev.map((r) => (r.id === runId ? updated : r)));
+        setSelectedRun((prev) => (prev?.id === runId ? updated : prev));
+        if (updated.status === "completed" || updated.status === "failed") {
+          stopPolling();
+        }
+      } catch (err: unknown) {
+        setRunError(formatApiError(err, "Polling failed"));
         stopPolling();
       }
     }, 1500);
@@ -113,30 +139,37 @@ export default function RunPage() {
     setSubmitting(true);
     try {
       const cfg: DataConfig = {
-        source: assetClass === "crypto" ? "binance" : "yahoo" as DataSource,
+        source: assetClass === "crypto" ? "binance" : ("yahoo" as DataSource),
         symbol,
         asset_class: assetClass,
         timeframe,
         start_date: startDate,
-        end_date:   endDate,
+        end_date: endDate,
       };
-      const run = await backteststApi.create({ strategy_id: strategyId, data_config: cfg });
+      const run = await backteststApi.create({
+        strategy_id: strategyId,
+        data_config: cfg,
+      });
       setRuns((prev) => [run, ...prev]);
       setSelectedRun(run);
       if (run.status === "pending" || run.status === "running") {
         startPolling(run.id);
       }
     } catch (err: unknown) {
-      setRunError(err instanceof Error ? err.message : "Unknown error");
+      setRunError(formatApiError(err, "Unknown error"));
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(runId: string) {
-    await backteststApi.delete(runId);
-    setRuns((prev) => prev.filter((r) => r.id !== runId));
-    if (selectedRun?.id === runId) setSelectedRun(null);
+    try {
+      await backteststApi.delete(runId);
+      setRuns((prev) => prev.filter((r) => r.id !== runId));
+      if (selectedRun?.id === runId) setSelectedRun(null);
+    } catch (err: unknown) {
+      setRunError(formatApiError(err, "Failed to delete run"));
+    }
   }
 
   const selectedStrategy = strategyList.find((s) => s.id === strategyId);
@@ -146,8 +179,17 @@ export default function RunPage() {
       {/* ── Left column: form + run list ───────────────────────────────────── */}
       <div className="w-80 flex-shrink-0 flex flex-col gap-6">
         <div>
-          <h1 className="font-serif italic text-display text-ink mb-1">Run Backtest</h1>
-          <p className="text-body text-muted">Configure data and launch a run.</p>
+          <h1 className="font-serif italic text-display text-ink mb-1">
+            Run Backtest
+          </h1>
+          <p className="text-body text-muted">
+            Configure data and launch a run.
+          </p>
+          {loadError && (
+            <div className="mt-3">
+              <ErrorBanner message={loadError} onRetry={loadInitialData} />
+            </div>
+          )}
         </div>
 
         {/* Form */}
@@ -159,7 +201,10 @@ export default function RunPage() {
               <div className="h-9 bg-border rounded animate-pulse" />
             ) : (
               <Select
-                options={strategyList.map((s) => ({ value: s.id, label: s.name }))}
+                options={strategyList.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
                 value={strategyId}
                 onChange={setStrategyId}
                 placeholder="Select a strategy…"
@@ -186,7 +231,9 @@ export default function RunPage() {
 
           {/* Asset class */}
           <div>
-            <label className="block text-small text-muted mb-1">Asset class</label>
+            <label className="block text-small text-muted mb-1">
+              Asset class
+            </label>
             <SegmentedControl
               options={ASSET_CLASSES}
               value={assetClass}
@@ -196,7 +243,9 @@ export default function RunPage() {
 
           {/* Timeframe */}
           <div>
-            <label className="block text-small text-muted mb-1">Timeframe</label>
+            <label className="block text-small text-muted mb-1">
+              Timeframe
+            </label>
             <SegmentedControl
               options={TIMEFRAMES}
               value={timeframe}
@@ -228,9 +277,7 @@ export default function RunPage() {
             </div>
           </div>
 
-          {runError && (
-            <p className="text-small text-negative">{runError}</p>
-          )}
+          {runError && <ErrorBanner message={runError} variant="inline" />}
 
           <button
             type="submit"
@@ -288,7 +335,6 @@ export default function RunPage() {
   );
 }
 
-
 // ── Run detail panel ──────────────────────────────────────────────────────────
 
 function RunDetail({
@@ -306,9 +352,12 @@ function RunDetail({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="font-serif italic text-title text-ink">{run.strategy_name}</h2>
+          <h2 className="font-serif italic text-title text-ink">
+            {run.strategy_name}
+          </h2>
           <p className="text-small text-muted mt-0.5">
-            {cfg.symbol} · {cfg.asset_class} · {cfg.timeframe} · {cfg.start_date} → {cfg.end_date}
+            {cfg.symbol} · {cfg.asset_class} · {cfg.timeframe} ·{" "}
+            {cfg.start_date} → {cfg.end_date}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -347,14 +396,24 @@ function RunDetail({
         <>
           {/* Metrics grid */}
           <div className="grid grid-cols-4 gap-3">
-            <MetricCard label="Final value"   value={`$${fmt(m.final_value, 0)}`} />
-            <MetricCard label="Sharpe ratio"  value={fmt(m.sharpe_ratio)}  />
+            <MetricCard
+              label="Final value"
+              value={`$${fmt(m.final_value, 0)}`}
+            />
+            <MetricCard label="Sharpe ratio" value={fmt(m.sharpe_ratio)} />
             <MetricCard label="Sortino ratio" value={fmt(m.sortino_ratio)} />
-            <MetricCard label="CAGR"          value={fmtPct(m.cagr)}       />
-            <MetricCard label="Max drawdown"  value={fmtPct(m.max_drawdown)} negative={m.max_drawdown != null && m.max_drawdown < 0} />
-            <MetricCard label="Win rate"      value={fmtPct(m.win_rate)}   />
+            <MetricCard label="CAGR" value={fmtPct(m.cagr)} />
+            <MetricCard
+              label="Max drawdown"
+              value={fmtPct(m.max_drawdown)}
+              negative={m.max_drawdown != null && m.max_drawdown < 0}
+            />
+            <MetricCard label="Win rate" value={fmtPct(m.win_rate)} />
             <MetricCard label="Profit factor" value={fmt(m.profit_factor)} />
-            <MetricCard label="Total trades"  value={String(m.total_trades ?? "—")} />
+            <MetricCard
+              label="Total trades"
+              value={String(m.total_trades ?? "—")}
+            />
           </div>
 
           {/* Log */}
@@ -384,7 +443,9 @@ function MetricCard({
   return (
     <div className="bg-surface border border-border rounded-lg px-4 py-3">
       <p className="text-small text-muted mb-1">{label}</p>
-      <p className={`text-title font-medium ${negative ? "text-negative" : "text-ink"}`}>
+      <p
+        className={`text-title font-medium ${negative ? "text-negative" : "text-ink"}`}
+      >
         {value}
       </p>
     </div>

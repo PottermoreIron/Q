@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { data as dataApi, type AssetClass, type DataPreview, type SymbolResult, type Timeframe } from "@/lib/api";
+import {
+  data as dataApi,
+  type AssetClass,
+  type DataPreview,
+  type SymbolResult,
+  type Timeframe,
+} from "@/lib/api";
+import { ErrorBanner } from "@/components/ErrorBanner";
+import { formatApiError } from "@/lib/format-api-error";
 
 const ASSET_CLASSES: { value: AssetClass; label: string }[] = [
   { value: "crypto", label: "Crypto" },
@@ -11,16 +19,20 @@ const ASSET_CLASSES: { value: AssetClass; label: string }[] = [
 ];
 
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
-  { value: "1m", label: "1m" }, { value: "5m", label: "5m" },
-  { value: "15m", label: "15m" }, { value: "30m", label: "30m" },
-  { value: "1h", label: "1h" }, { value: "4h", label: "4h" },
-  { value: "1d", label: "1D" }, { value: "1w", label: "1W" },
+  { value: "1m", label: "1m" },
+  { value: "5m", label: "5m" },
+  { value: "15m", label: "15m" },
+  { value: "30m", label: "30m" },
+  { value: "1h", label: "1h" },
+  { value: "4h", label: "4h" },
+  { value: "1d", label: "1D" },
+  { value: "1w", label: "1W" },
   { value: "1M", label: "1M" },
 ];
 
 const SOURCES = [
-  { value: "csv",     label: "CSV Upload" },
-  { value: "yahoo",   label: "Yahoo Finance" },
+  { value: "csv", label: "CSV Upload" },
+  { value: "yahoo", label: "Yahoo Finance" },
   { value: "binance", label: "Binance" },
   { value: "akshare", label: "AkShare" },
 ];
@@ -34,22 +46,30 @@ export default function DataPage() {
 
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SymbolResult[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<SymbolResult | null>(null);
+  const [selectedSymbol, setSelectedSymbol] = useState<SymbolResult | null>(
+    null,
+  );
 
   const [preview, setPreview] = useState<DataPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
-  const handleSearch = useCallback(async (q: string) => {
-    setQuery(q);
-    if (q.length < 1) { setSearchResults([]); return; }
-    try {
-      const results = await dataApi.search(q, assetClass);
-      setSearchResults(results);
-    } catch {
-      setSearchResults([]);
-    }
-  }, [assetClass]);
+  const handleSearch = useCallback(
+    async (q: string) => {
+      setQuery(q);
+      if (q.length < 1) {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        const results = await dataApi.search(q, assetClass);
+        setSearchResults(results);
+      } catch {
+        setSearchResults([]);
+      }
+    },
+    [assetClass],
+  );
 
   const handleSelectSymbol = (s: SymbolResult) => {
     setSelectedSymbol(s);
@@ -72,7 +92,7 @@ export default function DataPage() {
       });
       setPreview(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to fetch data");
+      setError(formatApiError(e, "Failed to fetch data"));
     } finally {
       setIsPending(false);
     }
@@ -86,7 +106,7 @@ export default function DataPage() {
       await dataApi.upload(file);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      setError(formatApiError(e, "Upload failed"));
     } finally {
       setIsPending(false);
     }
@@ -96,15 +116,18 @@ export default function DataPage() {
     <div>
       {/* Page header */}
       <h1 className="font-serif italic text-display text-ink mb-1">Data</h1>
-      <p className="text-body text-muted mb-8">Configure your data source before running a backtest.</p>
+      <p className="text-body text-muted mb-8">
+        Configure your data source before running a backtest.
+      </p>
 
       <div className="grid grid-cols-[1fr_1fr] gap-6">
         {/* Left column — configuration */}
         <div className="space-y-6">
-
           {/* Source */}
           <section>
-            <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">Source</h2>
+            <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">
+              Source
+            </h2>
             <div className="flex gap-2">
               {SOURCES.map((s) => (
                 <button
@@ -124,20 +147,31 @@ export default function DataPage() {
 
           {source === "csv" ? (
             <section>
-              <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">Upload CSV</h2>
+              <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">
+                Upload CSV
+              </h2>
               <p className="text-small text-muted mb-3">
                 Expected columns: timestamp, open, high, low, close, volume
               </p>
               <label className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-body transition-colors duration-[80ms]">
-                <span className="text-body text-muted">Drop a CSV file or click to browse</span>
-                <input type="file" accept=".csv" className="sr-only" onChange={handleCSVUpload} />
+                <span className="text-body text-muted">
+                  Drop a CSV file or click to browse
+                </span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="sr-only"
+                  onChange={handleCSVUpload}
+                />
               </label>
             </section>
           ) : (
             <>
               {/* Symbol search */}
               <section>
-                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">Symbol</h2>
+                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">
+                  Symbol
+                </h2>
                 <div className="relative">
                   <input
                     type="text"
@@ -154,8 +188,12 @@ export default function DataPage() {
                             onClick={() => handleSelectSymbol(r)}
                             className="w-full flex items-center justify-between px-3 py-2 text-body hover:bg-background transition-colors duration-[80ms]"
                           >
-                            <span className="font-medium text-ink">{r.symbol}</span>
-                            <span className="text-small text-muted">{r.name}</span>
+                            <span className="font-medium text-ink">
+                              {r.symbol}
+                            </span>
+                            <span className="text-small text-muted">
+                              {r.name}
+                            </span>
                           </button>
                         </li>
                       ))}
@@ -171,7 +209,9 @@ export default function DataPage() {
 
               {/* Asset class */}
               <section>
-                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">Asset Class</h2>
+                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">
+                  Asset Class
+                </h2>
                 <div className="flex gap-2 flex-wrap">
                   {ASSET_CLASSES.map((ac) => (
                     <button
@@ -191,7 +231,9 @@ export default function DataPage() {
 
               {/* Timeframe */}
               <section>
-                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">Timeframe</h2>
+                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">
+                  Timeframe
+                </h2>
                 <div className="flex gap-1.5 flex-wrap">
                   {TIMEFRAMES.map((tf) => (
                     <button
@@ -211,10 +253,14 @@ export default function DataPage() {
 
               {/* Date range */}
               <section>
-                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">Date Range</h2>
+                <h2 className="text-heading font-medium text-body mb-2 pb-2 border-b border-border">
+                  Date Range
+                </h2>
                 <div className="flex gap-3">
                   <div className="flex-1">
-                    <label className="block text-label uppercase tracking-widest text-muted mb-1">From</label>
+                    <label className="block text-label uppercase tracking-widest text-muted mb-1">
+                      From
+                    </label>
                     <input
                       type="date"
                       value={startDate}
@@ -223,7 +269,9 @@ export default function DataPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-label uppercase tracking-widest text-muted mb-1">To</label>
+                    <label className="block text-label uppercase tracking-widest text-muted mb-1">
+                      To
+                    </label>
                     <input
                       type="date"
                       value={endDate}
@@ -251,30 +299,41 @@ export default function DataPage() {
         {/* Right column — preview */}
         <div>
           {error && (
-            <div className="p-4 bg-surface border border-border rounded-lg">
-              <p className="text-body text-negative">{error}</p>
-            </div>
+            <ErrorBanner
+              message={error}
+              onRetry={selectedSymbol ? handlePreview : undefined}
+            />
           )}
 
           {preview && (
             <div className="bg-surface border border-border rounded-lg p-5 animate-slide-up-fade">
               <div className="flex items-baseline justify-between mb-4">
-                <h2 className="font-serif italic text-title text-ink">{preview.symbol}</h2>
-                <span className="text-small text-muted">{preview.bar_count.toLocaleString()} bars</span>
+                <h2 className="font-serif italic text-title text-ink">
+                  {preview.symbol}
+                </h2>
+                <span className="text-small text-muted">
+                  {preview.bar_count.toLocaleString()} bars
+                </span>
               </div>
 
               <div className="flex gap-6 mb-5">
                 <div>
                   <p className="text-data text-ink">{preview.timeframe}</p>
-                  <p className="text-label uppercase tracking-widest text-muted mt-0.5">Timeframe</p>
+                  <p className="text-label uppercase tracking-widest text-muted mt-0.5">
+                    Timeframe
+                  </p>
                 </div>
                 <div>
                   <p className="text-data text-ink">{preview.start_date}</p>
-                  <p className="text-label uppercase tracking-widest text-muted mt-0.5">From</p>
+                  <p className="text-label uppercase tracking-widest text-muted mt-0.5">
+                    From
+                  </p>
                 </div>
                 <div>
                   <p className="text-data text-ink">{preview.end_date}</p>
-                  <p className="text-label uppercase tracking-widest text-muted mt-0.5">To</p>
+                  <p className="text-label uppercase tracking-widest text-muted mt-0.5">
+                    To
+                  </p>
                 </div>
               </div>
 
@@ -282,26 +341,49 @@ export default function DataPage() {
               <table className="w-full text-small">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Date", "Open", "High", "Low", "Close", "Volume"].map((h) => (
-                      <th key={h} className="text-left pb-2 text-label uppercase tracking-widest text-muted font-medium">
-                        {h}
-                      </th>
-                    ))}
+                    {["Date", "Open", "High", "Low", "Close", "Volume"].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          className="text-left pb-2 text-label uppercase tracking-widest text-muted font-medium"
+                        >
+                          {h}
+                        </th>
+                      ),
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {preview.bars.map((bar) => {
-                    const date = new Date(bar.timestamp).toLocaleDateString("en-US", {
-                      month: "short", day: "numeric", year: "numeric",
-                    });
+                    const date = new Date(bar.timestamp).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    );
                     const isUp = bar.close >= bar.open;
                     return (
-                      <tr key={bar.timestamp} className="border-b border-border last:border-0">
-                        <td className="py-2 text-muted font-mono text-mono">{date}</td>
-                        <td className="py-2 font-mono text-mono text-body">{bar.open.toFixed(2)}</td>
-                        <td className="py-2 font-mono text-mono text-body">{bar.high.toFixed(2)}</td>
-                        <td className="py-2 font-mono text-mono text-body">{bar.low.toFixed(2)}</td>
-                        <td className={`py-2 font-mono text-mono font-medium ${isUp ? "text-positive" : "text-negative"}`}>
+                      <tr
+                        key={bar.timestamp}
+                        className="border-b border-border last:border-0"
+                      >
+                        <td className="py-2 text-muted font-mono text-mono">
+                          {date}
+                        </td>
+                        <td className="py-2 font-mono text-mono text-body">
+                          {bar.open.toFixed(2)}
+                        </td>
+                        <td className="py-2 font-mono text-mono text-body">
+                          {bar.high.toFixed(2)}
+                        </td>
+                        <td className="py-2 font-mono text-mono text-body">
+                          {bar.low.toFixed(2)}
+                        </td>
+                        <td
+                          className={`py-2 font-mono text-mono font-medium ${isUp ? "text-positive" : "text-negative"}`}
+                        >
                           {bar.close.toFixed(2)}
                         </td>
                         <td className="py-2 font-mono text-mono text-muted">
@@ -313,7 +395,9 @@ export default function DataPage() {
                 </tbody>
               </table>
 
-              <p className="text-small text-muted mt-3">Showing first 5 bars of {preview.bar_count.toLocaleString()}</p>
+              <p className="text-small text-muted mt-3">
+                Showing first 5 bars of {preview.bar_count.toLocaleString()}
+              </p>
             </div>
           )}
 
