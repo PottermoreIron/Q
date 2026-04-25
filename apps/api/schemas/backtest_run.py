@@ -48,6 +48,7 @@ class BacktestRunOut(BaseModel):
     trades: Optional[List[TradeOut]]
     error_message: Optional[str]
     log_output: Optional[str]
+    as_of_time: Optional[str]
     created_at: str
     completed_at: Optional[str]
 

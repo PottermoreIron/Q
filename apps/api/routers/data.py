@@ -21,8 +21,8 @@ from schemas.data import (
     SymbolSearchResult,
     Timeframe,
 )
+from services.data.csv import parse_csv
 from services.data.registry import get_provider
-from services.data_ingestion import parse_csv
 
 router = APIRouter(prefix="/data", tags=["data"])
 

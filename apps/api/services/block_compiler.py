@@ -33,7 +33,12 @@ HEADER = dedent("""\
 
 FOOTER = dedent("""\
 
-        return {"entries": entries, "exits": exits}
+        return {
+            "entries":         entries,
+            "exits":           exits,
+            "stop_loss_pct":   stop_loss_pct,
+            "take_profit_pct": take_profit_pct,
+        }
 """)
 
 
@@ -172,13 +177,10 @@ def compile_blocks(blocks: List[Dict[str, Any]]) -> str:
     else:
         body_lines.append("exits   = pd.Series(False, index=close.index)")
 
-    if stop_loss_pct or take_profit_pct:
-        body_lines.append("")
-        body_lines.append("# --- Risk management (applied by the engine) ---")
-        if stop_loss_pct:
-            body_lines.append(f"stop_loss_pct   = {stop_loss_pct}")
-        if take_profit_pct:
-            body_lines.append(f"take_profit_pct = {take_profit_pct}")
+    body_lines.append("")
+    body_lines.append("# --- Risk management (applied by the engine) ---")
+    body_lines.append(f"stop_loss_pct   = {stop_loss_pct!r}")
+    body_lines.append(f"take_profit_pct = {take_profit_pct!r}")
 
     body = "\n".join(_indent(line) if line else "" for line in body_lines)
 
@@ -207,5 +209,13 @@ def _empty_strategy() -> str:
             entries = pd.Series(False, index=close.index)
             exits   = pd.Series(False, index=close.index)
 
-            return {"entries": entries, "exits": exits}
+            stop_loss_pct   = None
+            take_profit_pct = None
+
+            return {
+                "entries":         entries,
+                "exits":           exits,
+                "stop_loss_pct":   stop_loss_pct,
+                "take_profit_pct": take_profit_pct,
+            }
     """)

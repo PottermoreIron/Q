@@ -22,8 +22,8 @@ from models.backtest_run import BacktestRun
 from models.strategy import Strategy
 from schemas.backtest_run import BacktestRunOut, CreateRunIn, MetricsOut
 from services.data.registry import get_provider
+from services.engines.exceptions import EngineError
 from services.engines.registry import get_engine
-from services.simple_engine import EngineError
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
@@ -52,6 +52,7 @@ def _out(r: BacktestRun) -> BacktestRunOut:
         trades=trades_out,
         error_message=r.error_message,
         log_output=r.log_output,
+        as_of_time=r.as_of_time.isoformat() if r.as_of_time else None,
         created_at=r.created_at.isoformat(),
         completed_at=r.completed_at.isoformat() if r.completed_at else None,
     )
@@ -74,6 +75,7 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
         strategy_code=strategy.python_code,
         data_config=cfg.model_dump(),
         status="pending",
+        as_of_time=datetime.now(timezone.utc),
     )
     db.add(run)
     await db.commit()

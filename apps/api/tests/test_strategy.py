@@ -1,33 +1,15 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import Base, get_db
+from database import get_db
 from main import app
 
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
-
-
-@pytest.fixture(scope="module")
-async def db_engine():
-    engine = create_async_engine(TEST_DB_URL)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield engine
-    await engine.dispose()
-
 
 @pytest.fixture
-async def db_session(db_engine):
-    factory = async_sessionmaker(db_engine, expire_on_commit=False)
-    async with factory() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(db_session: AsyncSession):
+async def client(db: AsyncSession):
     async def override():
-        yield db_session
+        yield db
 
     app.dependency_overrides[get_db] = override
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:

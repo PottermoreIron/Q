@@ -2,7 +2,7 @@
 Backtest run tests.
 
 Engine tests use synthetic OHLCV data — no live API calls.
-Run creation tests mock the data fetching layer.
+Integration tests mock the data-provider layer via get_provider().
 """
 
 import pytest
@@ -10,14 +10,15 @@ import numpy as np
 import pandas as pd
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from database import Base, get_db
 from main import app
+from schemas.data import OHLCVBar
+from services.engines._runtime import run_strategy
+from services.engines.exceptions import EngineError
 from services.metrics import compute_metrics
-from services.simple_engine import EngineError, run_strategy
 
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
 # ── Synthetic fixtures ────────────────────────────────────────────────────────
 
@@ -34,6 +35,18 @@ def _make_ohlcv(n: int = 200, seed: int = 42) -> pd.DataFrame:
     return df
 
 
+def _make_bars(n: int = 200) -> list[OHLCVBar]:
+    base_ms = 1672531200000
+    return [
+        OHLCVBar(
+            timestamp=base_ms + i * 86400000,
+            open=100.0, high=105.0, low=95.0,
+            close=100.0 + i * 0.5, volume=1000.0,
+        )
+        for i in range(n)
+    ]
+
+
 _SIMPLE_STRATEGY = """\
 import pandas as pd
 
@@ -45,6 +58,7 @@ def run(ohlcv):
     exits   = fast < slow
     return {"entries": entries, "exits": exits}
 """
+
 
 # ── Unit: metrics ─────────────────────────────────────────────────────────────
 
@@ -111,30 +125,21 @@ def test_engine_empty_signals():
 
 # ── Integration: API ──────────────────────────────────────────────────────────
 
-@pytest.fixture(scope="module")
-async def db_engine():
-    engine = create_async_engine(TEST_DB_URL)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield engine
-    await engine.dispose()
-
-
 @pytest.fixture
-async def db_session(db_engine):
-    factory = async_sessionmaker(db_engine, expire_on_commit=False)
-    async with factory() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(db_session: AsyncSession):
+async def client(db: AsyncSession):
+    """HTTP client wired to the real-PG db fixture from conftest."""
     async def override():
-        yield db_session
+        yield db
     app.dependency_overrides[get_db] = override
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+
+def _mock_provider(bars: list[OHLCVBar]):
+    provider = MagicMock()
+    provider.fetch_ohlcv = AsyncMock(return_value=bars)
+    return provider
 
 
 async def _create_strategy(client, code: str = _SIMPLE_STRATEGY) -> str:
@@ -149,17 +154,9 @@ async def _create_strategy(client, code: str = _SIMPLE_STRATEGY) -> str:
 
 @pytest.mark.asyncio
 async def test_create_run_inline(client):
-    """Inline run with mocked data fetch."""
+    """Inline run with mocked data-provider layer."""
     sid = await _create_strategy(client)
-
-    mock_bars = [
-        type("Bar", (), {"timestamp": 1672531200000 + i * 86400000,
-                         "open": 100.0, "high": 105.0, "low": 95.0,
-                         "close": 100.0 + i * 0.5, "volume": 1000.0})()
-        for i in range(200)
-    ]
-
-    with patch("routers.backtest.fetch_yahoo", new_callable=AsyncMock, return_value=mock_bars):
+    with patch("routers.backtest.get_provider", return_value=_mock_provider(_make_bars(200))):
         resp = await client.post("/backtests", json={
             "strategy_id": sid,
             "data_config": {
@@ -168,7 +165,6 @@ async def test_create_run_inline(client):
                 "start_date": "2022-01-01", "end_date": "2022-12-31",
             },
         })
-
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "completed"
@@ -179,7 +175,7 @@ async def test_create_run_inline(client):
 @pytest.mark.asyncio
 async def test_create_run_no_data(client):
     sid = await _create_strategy(client)
-    with patch("routers.backtest.fetch_yahoo", new_callable=AsyncMock, return_value=[]):
+    with patch("routers.backtest.get_provider", return_value=_mock_provider([])):
         resp = await client.post("/backtests", json={
             "strategy_id": sid,
             "data_config": {
@@ -195,13 +191,7 @@ async def test_create_run_no_data(client):
 @pytest.mark.asyncio
 async def test_get_run(client):
     sid = await _create_strategy(client)
-    mock_bars = [
-        type("Bar", (), {"timestamp": 1672531200000 + i * 86400000,
-                         "open": 100.0, "high": 105.0, "low": 95.0,
-                         "close": 101.0, "volume": 1000.0})()
-        for i in range(100)
-    ]
-    with patch("routers.backtest.fetch_yahoo", new_callable=AsyncMock, return_value=mock_bars):
+    with patch("routers.backtest.get_provider", return_value=_mock_provider(_make_bars(100))):
         create = await client.post("/backtests", json={
             "strategy_id": sid,
             "data_config": {
@@ -226,13 +216,7 @@ async def test_list_runs(client):
 @pytest.mark.asyncio
 async def test_delete_run(client):
     sid = await _create_strategy(client)
-    mock_bars = [
-        type("Bar", (), {"timestamp": 1672531200000 + i * 86400000,
-                         "open": 100.0, "high": 105.0, "low": 95.0,
-                         "close": 100.0, "volume": 1000.0})()
-        for i in range(50)
-    ]
-    with patch("routers.backtest.fetch_yahoo", new_callable=AsyncMock, return_value=mock_bars):
+    with patch("routers.backtest.get_provider", return_value=_mock_provider(_make_bars(50))):
         create = await client.post("/backtests", json={
             "strategy_id": sid,
             "data_config": {

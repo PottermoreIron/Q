@@ -36,5 +36,9 @@ class BacktestRun(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     log_output: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # as_of_time: the bitemporal anchor — data read for this run used bars where
+    # effective_from <= as_of_time.  Replay with the same value gives byte-identical results.
+    as_of_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

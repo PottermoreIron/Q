@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from services.simple_engine import run_strategy
+from services.engines._runtime import run_strategy
 from services.metrics import compute_metrics
 
 
