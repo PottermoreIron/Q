@@ -34,3 +34,4 @@ ios/
 .DS_Store
 *.log
 coverage/
+.worktrees/
