@@ -19,6 +19,12 @@ import pandas as pd
 
 from schemas.data import OHLCVBar
 from services.engines.exceptions import EngineError
+from services.engines.execution_model import (
+    CurrentCloseDelayedFill,
+    ExecutionConfig,
+    FixedBpsSlippage,
+    PercentageCommission,
+)
 from services.engines.strategy_contract import validate_result
 from services.metrics import compute_metrics
 from services.python_validator import _ALLOWED_IMPORTS, validate
@@ -49,12 +55,21 @@ _SAFE_BUILTINS: Dict[str, Any] = {
 }
 
 
+def _default_execution_config() -> ExecutionConfig:
+    # Reproduces Phase 1 behaviour: fill at next-bar close, 0.1% commission, 0 slippage.
+    return ExecutionConfig(
+        commission=PercentageCommission(rate=0.001),
+        slippage=FixedBpsSlippage(bps=0),
+        fill=CurrentCloseDelayedFill(latency_bars=1),
+    )
+
+
 def run_strategy(
     code: str,
     ohlcv_df: pd.DataFrame,
     initial_capital: float = 100_000.0,
-    commission: float = 0.001,
     *,
+    execution_config: Optional[ExecutionConfig] = None,
     sandbox: bool = False,
 ) -> Tuple[Dict[str, Optional[float]], List[Dict[str, Any]], pd.Series]:
     """
@@ -93,11 +108,12 @@ def run_strategy(
     except Exception as exc:
         raise EngineError(f"Strategy runtime error: {exc}") from exc
 
-    result = validate_result(raw)
+    result  = validate_result(raw)
     entries = result["entries"].reindex(ohlcv_df.index, fill_value=False).astype(bool)
     exits   = result["exits"].reindex(ohlcv_df.index, fill_value=False).astype(bool)
+    cfg     = execution_config or _default_execution_config()
 
-    equity, trades = _simulate(ohlcv_df, entries, exits, initial_capital, commission)
+    equity, trades = _simulate(ohlcv_df, entries, exits, initial_capital, cfg)
     bars_per_year  = _infer_bars_per_year(ohlcv_df)
     metrics        = compute_metrics(equity, trades, bars_per_year=bars_per_year)
 
@@ -109,57 +125,92 @@ def _simulate(
     entries: pd.Series,
     exits: pd.Series,
     initial_capital: float,
-    commission: float,
+    cfg: ExecutionConfig,
 ) -> Tuple[pd.Series, List[Dict[str, Any]]]:
     close = df["close"].values
     n     = len(close)
+    atr   = _compute_atr(df)
+    lat   = cfg.fill.latency_bars
 
-    cash     = initial_capital
-    position = 0.0
-    entry_px = 0.0
-    equity   = np.empty(n, dtype=float)
+    cash      = initial_capital
+    position  = 0.0
+    entry_px  = 0.0
+    entry_fee = 0.0
+    equity    = np.empty(n, dtype=float)
     trades: List[Dict[str, Any]] = []
 
     for i in range(n):
-        price = close[i]
+        signal_bar = i - lat
 
-        if i > 0 and entries.iloc[i - 1] and position == 0.0:
-            size     = cash / (price * (1 + commission))
-            cost     = size * price * (1 + commission)
-            cash    -= cost
-            position = size
-            entry_px = price
+        if signal_bar >= 0 and entries.iloc[signal_bar] and position == 0.0:
+            raw_px    = cfg.fill.fill_price(df, signal_bar, "buy")
+            fill_px   = cfg.slippage.adjust(raw_px, "buy", atr=float(atr[i]))
+            shares    = cash / fill_px
+            fee       = cfg.commission.fee(cash, shares, fill_px, "buy")
+            position  = (cash - fee) / fill_px
+            entry_px  = fill_px
+            entry_fee = fee
+            cash      = 0.0
 
-        if i > 0 and exits.iloc[i - 1] and position > 0.0:
-            proceeds   = position * price * (1 - commission)
-            cost_basis = position * entry_px * (1 + commission)
-            pnl        = proceeds - cost_basis
+        if signal_bar >= 0 and exits.iloc[signal_bar] and position > 0.0:
+            raw_px        = cfg.fill.fill_price(df, signal_bar, "sell")
+            fill_px       = cfg.slippage.adjust(raw_px, "sell", atr=float(atr[i]))
+            proceeds      = position * fill_px
+            fee           = cfg.commission.fee(proceeds, position, fill_px, "sell")
+            slippage_cost = abs(raw_px - fill_px) * position
+            net_proceeds  = proceeds - fee
+            pnl           = net_proceeds - (position * entry_px + entry_fee)
             trades.append({
-                "entry_price": entry_px,
-                "exit_price":  price,
-                "pnl":         pnl,
-                "side":        "long",
+                "entry_price":   entry_px,
+                "exit_price":    fill_px,
+                "pnl":           pnl,
+                "side":          "long",
+                "fees":          entry_fee + fee,
+                "slippage_cost": slippage_cost,
             })
-            cash     += proceeds
+            cash      = net_proceeds
             position  = 0.0
             entry_px  = 0.0
+            entry_fee = 0.0
 
-        equity[i] = cash + position * price
+        equity[i] = cash + position * close[i]
 
     if position > 0.0:
-        price      = close[-1]
-        proceeds   = position * price * (1 - commission)
-        cost_basis = position * entry_px * (1 + commission)
-        pnl        = proceeds - cost_basis
+        raw_px        = close[-1]
+        fill_px       = cfg.slippage.adjust(raw_px, "sell", atr=float(atr[-1]))
+        proceeds      = position * fill_px
+        fee           = cfg.commission.fee(proceeds, position, fill_px, "sell")
+        slippage_cost = abs(raw_px - fill_px) * position
+        net_proceeds  = proceeds - fee
+        pnl           = net_proceeds - (position * entry_px + entry_fee)
         trades.append({
-            "entry_price": entry_px,
-            "exit_price":  price,
-            "pnl":         pnl,
-            "side":        "long",
+            "entry_price":   entry_px,
+            "exit_price":    fill_px,
+            "pnl":           pnl,
+            "side":          "long",
+            "fees":          entry_fee + fee,
+            "slippage_cost": slippage_cost,
         })
-        equity[-1] = cash + proceeds
+        equity[-1] = cash + net_proceeds
 
     return pd.Series(equity, index=df.index), trades
+
+
+def _compute_atr(df: pd.DataFrame, period: int = 14) -> np.ndarray:
+    high  = df["high"].values
+    low   = df["low"].values
+    close = df["close"].values
+    n     = len(close)
+    tr    = np.empty(n)
+    tr[0] = high[0] - low[0]
+    for i in range(1, n):
+        tr[i] = max(high[i] - low[i], abs(high[i] - close[i-1]), abs(low[i] - close[i-1]))
+    atr = np.empty(n)
+    atr[0] = tr[0]
+    k = 1.0 / period
+    for i in range(1, n):
+        atr[i] = atr[i-1] * (1 - k) + tr[i] * k
+    return atr
 
 
 def _infer_bars_per_year(df: pd.DataFrame) -> int:

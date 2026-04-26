@@ -68,7 +68,7 @@ def _execute(code: str, ohlcv_rows: list[dict]) -> None:
     # Re-run AST validator as first wall
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     from services.python_validator import validate
-    from services.engines._runtime import _simulate, _infer_bars_per_year
+    from services.engines._runtime import _simulate, _infer_bars_per_year, _default_execution_config
     from services.metrics import compute_metrics
 
     valid, errors = validate(code)
@@ -116,7 +116,7 @@ def _execute(code: str, ohlcv_rows: list[dict]) -> None:
     entries = raw["entries"].reindex(df.index, fill_value=False).astype(bool)
     exits   = raw["exits"].reindex(df.index, fill_value=False).astype(bool)
 
-    equity, trades = _simulate(df, entries, exits, 100_000.0, 0.001)
+    equity, trades = _simulate(df, entries, exits, 100_000.0, _default_execution_config())
     bpy = _infer_bars_per_year(df)
     metrics = compute_metrics(equity, trades, bars_per_year=bpy)
 
