@@ -17,21 +17,54 @@ class CreateRunIn(BaseModel):
 
 
 class MetricsOut(BaseModel):
-    sharpe_ratio:   Optional[float]
-    sortino_ratio:  Optional[float]
-    cagr:           Optional[float]
-    max_drawdown:   Optional[float]
-    win_rate:       Optional[float]
-    total_trades:   Optional[int]
-    profit_factor:  Optional[float]
-    final_value:    Optional[float]
+    schema_version:             int = 2
+    # core
+    final_value:                Optional[float]
+    total_return:               Optional[float]
+    cagr:                       Optional[float]
+    # risk
+    volatility:                 Optional[float]
+    downside_volatility:        Optional[float]
+    sharpe_ratio:               Optional[float]
+    sortino_ratio:              Optional[float]
+    var_95:                     Optional[float]
+    cvar_95:                    Optional[float]
+    max_drawdown:               Optional[float]
+    max_drawdown_duration_days: Optional[int]
+    calmar_ratio:               Optional[float]
+    # distribution
+    omega_ratio:                Optional[float]
+    tail_ratio:                 Optional[float]
+    # trade quality
+    win_rate:                   Optional[float]
+    total_trades:               Optional[int]
+    profit_factor:              Optional[float]
+    avg_win:                    Optional[float]
+    avg_loss:                   Optional[float]
+    largest_win:                Optional[float]
+    largest_loss:               Optional[float]
+    avg_trade_duration_bars:    Optional[float]
+    # exposure
+    exposure_pct:               Optional[float]
+    turnover:                   Optional[float]
 
 
 class TradeOut(BaseModel):
+    # v1 fields
     entry_price: float
-    exit_price: float
-    pnl: float
-    side: str
+    exit_price:  float
+    pnl:         float
+    side:        str
+    fees:        float = 0.0
+    slippage_cost: float = 0.0
+    # v2 fields
+    entry_time:  Optional[str] = None
+    exit_time:   Optional[str] = None
+    quantity:    Optional[float] = None
+    pnl_pct:     Optional[float] = None
+    bars_held:   Optional[int] = None
+    mae:         Optional[float] = None
+    mfe:         Optional[float] = None
 
 
 class BacktestRunOut(BaseModel):

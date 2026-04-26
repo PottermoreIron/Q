@@ -136,11 +136,22 @@ def _simulate(
     position  = 0.0
     entry_px  = 0.0
     entry_fee = 0.0
+    entry_bar = -1
+    min_close = 0.0
+    max_close = 0.0
     equity    = np.empty(n, dtype=float)
     trades: List[Dict[str, Any]] = []
 
     for i in range(n):
         signal_bar = i - lat
+
+        # update MAE/MFE trackers while in position
+        if position > 0.0:
+            c = close[i]
+            if c < min_close:
+                min_close = c
+            if c > max_close:
+                max_close = c
 
         if signal_bar >= 0 and entries.iloc[signal_bar] and position == 0.0:
             raw_px    = cfg.fill.fill_price(df, signal_bar, "buy")
@@ -150,6 +161,9 @@ def _simulate(
             position  = (cash - fee) / fill_px
             entry_px  = fill_px
             entry_fee = fee
+            entry_bar = i
+            min_close = close[i]
+            max_close = close[i]
             cash      = 0.0
 
         if signal_bar >= 0 and exits.iloc[signal_bar] and position > 0.0:
@@ -167,11 +181,19 @@ def _simulate(
                 "side":          "long",
                 "fees":          entry_fee + fee,
                 "slippage_cost": slippage_cost,
+                "entry_time":    str(df.index[entry_bar]),
+                "exit_time":     str(df.index[i]),
+                "quantity":      position,
+                "pnl_pct":       (fill_px - entry_px) / entry_px,
+                "bars_held":     i - entry_bar,
+                "mae":           (min_close - entry_px) / entry_px,
+                "mfe":           (max_close - entry_px) / entry_px,
             })
             cash      = net_proceeds
             position  = 0.0
             entry_px  = 0.0
             entry_fee = 0.0
+            entry_bar = -1
 
         equity[i] = cash + position * close[i]
 
@@ -190,6 +212,13 @@ def _simulate(
             "side":          "long",
             "fees":          entry_fee + fee,
             "slippage_cost": slippage_cost,
+            "entry_time":    str(df.index[entry_bar]),
+            "exit_time":     str(df.index[-1]),
+            "quantity":      position,
+            "pnl_pct":       (fill_px - entry_px) / entry_px,
+            "bars_held":     (n - 1) - entry_bar,
+            "mae":           (min_close - entry_px) / entry_px,
+            "mfe":           (max_close - entry_px) / entry_px,
         })
         equity[-1] = cash + net_proceeds
 
