@@ -172,18 +172,15 @@ def compute_metrics(
 
 
 def _max_drawdown_duration(equity: pd.Series) -> int:
-    peak = equity.iloc[0]
-    current_duration = 0
-    max_duration = 0
-    for val in equity:
-        if val >= peak:
-            peak = val
-            current_duration = 0
-        else:
-            current_duration += 1
-            if current_duration > max_duration:
-                max_duration = current_duration
-    return max_duration
+    arr = equity.values
+    running_max = np.maximum.accumulate(arr)
+    below = arr < running_max
+    changes = np.diff(below.astype(np.int8), prepend=0, append=0)
+    starts = np.where(changes == 1)[0]
+    ends   = np.where(changes == -1)[0]
+    if len(starts) == 0:
+        return 0
+    return int((ends - starts).max())
 
 
 def _null_metrics() -> Dict[str, Any]:
