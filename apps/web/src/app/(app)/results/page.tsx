@@ -64,10 +64,10 @@ function formatAxisDate(iso: string): string {
 // ── CSV export ────────────────────────────────────────────────────────────────
 
 function exportEquityCsv(run: BacktestRun) {
-  if (!run.equity_curve) return;
+  if (!run.equityCurve) return;
   const rows = [
     ["timestamp", "equity"],
-    ...run.equity_curve.map(([t, v]) => [t, v.toFixed(2)]),
+    ...run.equityCurve.map(([t, v]) => [t, v.toFixed(2)]),
   ];
   const csv = rows.map((r) => r.join(",")).join("\n");
   download(`equity_${run.id.slice(0, 8)}.csv`, csv);
@@ -75,12 +75,12 @@ function exportEquityCsv(run: BacktestRun) {
 
 function exportTradesCsv(run: BacktestRun) {
   if (!run.trades?.length) return;
-  const headers = ["entry_price", "exit_price", "pnl", "side"];
+  const headers = ["entryPrice", "exitPrice", "pnl", "side"];
   const rows = [
     headers,
     ...run.trades.map((t) => [
-      t.entry_price,
-      t.exit_price,
+      t.entryPrice,
+      t.exitPrice,
       t.pnl.toFixed(2),
       t.side,
     ]),
@@ -195,16 +195,16 @@ export default function ResultsPage() {
                       />
                     )}
                     <span className="text-small text-ink font-medium truncate">
-                      {r.strategy_name}
+                      {r.strategyName}
                     </span>
                   </div>
                   <p className="text-small text-muted mt-0.5 pl-4">
-                    {r.data_config.symbol} · {r.data_config.timeframe} ·{" "}
-                    {fmtCurrency(r.metrics?.final_value)}
+                    {r.dataConfig.symbol} · {r.dataConfig.timeframe} ·{" "}
+                    {fmtCurrency(r.metrics?.finalValue)}
                   </p>
                   <p className="text-small text-muted pl-4">
-                    Sharpe {fmt(r.metrics?.sharpe_ratio)} · DD{" "}
-                    {fmtPct(r.metrics?.max_drawdown)}
+                    Sharpe {fmt(r.metrics?.sharpeRatio)} · DD{" "}
+                    {fmtPct(r.metrics?.maxDrawdown)}
                   </p>
                 </button>
               );
@@ -243,16 +243,16 @@ function SingleRunView({ run }: { run: BacktestRun }) {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="font-serif italic text-title text-ink">
-            {run.strategy_name}
+            {run.strategyName}
           </h2>
           <p className="text-small text-muted mt-0.5">
-            {run.data_config.symbol} · {run.data_config.asset_class} ·{" "}
-            {run.data_config.timeframe} · {run.data_config.start_date} →{" "}
-            {run.data_config.end_date}
+            {run.dataConfig.symbol} · {run.dataConfig.assetClass} ·{" "}
+            {run.dataConfig.timeframe} · {run.dataConfig.startDate} →{" "}
+            {run.dataConfig.endDate}
           </p>
         </div>
         <div className="flex gap-2">
-          {run.equity_curve && (
+          {run.equityCurve && (
             <button
               onClick={() => exportEquityCsv(run)}
               className="px-3 py-1.5 border border-border rounded-md text-small text-muted hover:text-body transition-colors duration-[80ms]"
@@ -273,20 +273,20 @@ function SingleRunView({ run }: { run: BacktestRun }) {
 
       {/* Metrics grid */}
       <div className="grid grid-cols-4 gap-3">
-        <MetricCard label="Final value" value={fmtCurrency(m?.final_value)} />
+        <MetricCard label="Final value" value={fmtCurrency(m?.finalValue)} />
         <MetricCard label="CAGR" value={fmtPct(m?.cagr)} />
-        <MetricCard label="Sharpe" value={fmt(m?.sharpe_ratio)} />
-        <MetricCard label="Sortino" value={fmt(m?.sortino_ratio)} />
+        <MetricCard label="Sharpe" value={fmt(m?.sharpeRatio)} />
+        <MetricCard label="Sortino" value={fmt(m?.sortinoRatio)} />
         <MetricCard
           label="Max drawdown"
-          value={fmtPct(m?.max_drawdown)}
-          negative={!!m?.max_drawdown && m.max_drawdown < 0}
+          value={fmtPct(m?.maxDrawdown)}
+          negative={!!m?.maxDrawdown && m.maxDrawdown < 0}
         />
-        <MetricCard label="Win rate" value={fmtPct(m?.win_rate)} />
-        <MetricCard label="Profit factor" value={fmt(m?.profit_factor)} />
+        <MetricCard label="Win rate" value={fmtPct(m?.winRate)} />
+        <MetricCard label="Profit factor" value={fmt(m?.profitFactor)} />
         <MetricCard
           label="Total trades"
-          value={String(m?.total_trades ?? "—")}
+          value={String(m?.totalTrades ?? "—")}
         />
       </div>
 
@@ -370,30 +370,30 @@ function ComparisonView({ runs }: { runs: BacktestRun[] }) {
                         style={{ background: color }}
                       />
                       <span className="text-ink font-medium">
-                        {r.strategy_name}
+                        {r.strategyName}
                       </span>
-                      <span className="text-muted">{r.data_config.symbol}</span>
+                      <span className="text-muted">{r.dataConfig.symbol}</span>
                     </div>
                   </td>
                   <td className="py-2.5 px-4 text-right text-ink">
-                    {fmtCurrency(m?.final_value)}
+                    {fmtCurrency(m?.finalValue)}
                   </td>
                   <td className="py-2.5 px-4 text-right text-ink">
                     {fmtPct(m?.cagr)}
                   </td>
                   <td className="py-2.5 px-4 text-right text-ink">
-                    {fmt(m?.sharpe_ratio)}
+                    {fmt(m?.sharpeRatio)}
                   </td>
                   <td
-                    className={`py-2.5 px-4 text-right ${m?.max_drawdown != null && m.max_drawdown < 0 ? "text-negative" : "text-ink"}`}
+                    className={`py-2.5 px-4 text-right ${m?.maxDrawdown != null && m.maxDrawdown < 0 ? "text-negative" : "text-ink"}`}
                   >
-                    {fmtPct(m?.max_drawdown)}
+                    {fmtPct(m?.maxDrawdown)}
                   </td>
                   <td className="py-2.5 px-4 text-right text-ink">
-                    {fmtPct(m?.win_rate)}
+                    {fmtPct(m?.winRate)}
                   </td>
                   <td className="py-2.5 pl-4 text-right text-ink">
-                    {m?.total_trades ?? "—"}
+                    {m?.totalTrades ?? "—"}
                   </td>
                 </tr>
               );
@@ -416,9 +416,9 @@ function EquityCurveChart({ runs }: { runs: BacktestRun[] }) {
     const seriesMap: Record<string, Record<string, number>> = {};
 
     runs.forEach((r, i) => {
-      const key = `${r.strategy_name} (${r.data_config.symbol})`;
+      const key = `${r.strategyName} (${r.dataConfig.symbol})`;
       seriesMap[key] = {};
-      (r.equity_curve ?? []).forEach(([t, v]) => {
+      (r.equityCurve ?? []).forEach(([t, v]) => {
         allTimestamps.add(t);
         seriesMap[key][t] = v;
       });
@@ -492,7 +492,7 @@ function EquityCurveChart({ runs }: { runs: BacktestRun[] }) {
 
   // Single run — AreaChart with gradient fill
   const run = runs[0];
-  const data = (run.equity_curve ?? []).map(([t, v]) => ({ t, v }));
+  const data = (run.equityCurve ?? []).map(([t, v]) => ({ t, v }));
 
   if (data.length === 0) {
     return (
@@ -591,7 +591,7 @@ function TradeLog({ trades }: { trades: Trade[] }) {
         </thead>
         <tbody>
           {trades.map((t, i) => {
-            const ret = (t.exit_price - t.entry_price) / t.entry_price;
+            const ret = (t.exitPrice - t.entryPrice) / t.entryPrice;
             const win = t.pnl > 0;
             return (
               <tr
@@ -600,10 +600,10 @@ function TradeLog({ trades }: { trades: Trade[] }) {
               >
                 <td className="py-2 pr-4 text-muted">{i + 1}</td>
                 <td className="py-2 px-4 text-right text-ink">
-                  ${t.entry_price.toFixed(2)}
+                  ${t.entryPrice.toFixed(2)}
                 </td>
                 <td className="py-2 px-4 text-right text-ink">
-                  ${t.exit_price.toFixed(2)}
+                  ${t.exitPrice.toFixed(2)}
                 </td>
                 <td
                   className={`py-2 px-4 text-right font-medium ${win ? "text-positive" : "text-negative"}`}

@@ -59,9 +59,9 @@ export default function DashboardPage() {
 
   // Best run by Sharpe
   const bestRun = completedRuns.reduce<BacktestRun | null>((best, r) => {
-    if (!r.metrics?.sharpe_ratio) return best;
-    if (!best?.metrics?.sharpe_ratio) return r;
-    return r.metrics.sharpe_ratio > best.metrics.sharpe_ratio ? r : best;
+    if (!r.metrics?.sharpeRatio) return best;
+    if (!best?.metrics?.sharpeRatio) return r;
+    return r.metrics.sharpeRatio > best.metrics.sharpeRatio ? r : best;
   }, null);
 
   return (
@@ -110,10 +110,10 @@ export default function DashboardPage() {
             />
             <StatCard
               label="Best Sharpe"
-              value={fmt(bestRun?.metrics?.sharpe_ratio)}
+              value={fmt(bestRun?.metrics?.sharpeRatio)}
               sub={
                 bestRun
-                  ? `${bestRun.strategy_name} · ${bestRun.data_config.symbol}`
+                  ? `${bestRun.strategyName} · ${bestRun.dataConfig.symbol}`
                   : "no runs yet"
               }
               href="/results"
@@ -263,10 +263,10 @@ function RunRow({ run, idx }: { run: BacktestRun; idx: number }) {
       style={{ animationDelay: `${idx * 40}ms` }}
     >
       <div>
-        <p className="text-body text-ink font-medium">{run.strategy_name}</p>
+        <p className="text-body text-ink font-medium">{run.strategyName}</p>
         <p className="text-small text-muted mt-0.5">
-          {run.data_config.symbol} · {run.data_config.timeframe} ·{" "}
-          {run.data_config.start_date} → {run.data_config.end_date}
+          {run.dataConfig.symbol} · {run.dataConfig.timeframe} ·{" "}
+          {run.dataConfig.startDate} → {run.dataConfig.endDate}
         </p>
       </div>
       <div className="flex items-center gap-6 text-right">
@@ -274,18 +274,18 @@ function RunRow({ run, idx }: { run: BacktestRun; idx: number }) {
           <>
             <div>
               <p className="text-small text-muted">Final</p>
-              <p className="text-body text-ink">{fmtCurrency(m.final_value)}</p>
+              <p className="text-body text-ink">{fmtCurrency(m.finalValue)}</p>
             </div>
             <div>
               <p className="text-small text-muted">Sharpe</p>
-              <p className="text-body text-ink">{fmt(m.sharpe_ratio)}</p>
+              <p className="text-body text-ink">{fmt(m.sharpeRatio)}</p>
             </div>
             <div>
               <p className="text-small text-muted">Max DD</p>
               <p
-                className={`text-body ${m.max_drawdown != null && m.max_drawdown < 0 ? "text-negative" : "text-ink"}`}
+                className={`text-body ${m.maxDrawdown != null && m.maxDrawdown < 0 ? "text-negative" : "text-ink"}`}
               >
-                {fmtPct(m.max_drawdown)}
+                {fmtPct(m.maxDrawdown)}
               </p>
             </div>
           </>

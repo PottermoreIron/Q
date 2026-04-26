@@ -141,14 +141,14 @@ export default function RunPage() {
       const cfg: DataConfig = {
         source: assetClass === "crypto" ? "binance" : ("yahoo" as DataSource),
         symbol,
-        asset_class: assetClass,
+        assetClass,
         timeframe,
-        start_date: startDate,
-        end_date: endDate,
+        startDate,
+        endDate,
       };
       const run = await backteststApi.create({
-        strategy_id: strategyId,
-        data_config: cfg,
+        strategyId,
+        dataConfig: cfg,
       });
       setRuns((prev) => [run, ...prev]);
       setSelectedRun(run);
@@ -305,12 +305,12 @@ export default function RunPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-small text-ink font-medium truncate max-w-[140px]">
-                      {r.strategy_name}
+                      {r.strategyName}
                     </span>
                     {statusPill(r.status)}
                   </div>
                   <p className="text-small text-muted mt-0.5">
-                    {r.data_config.symbol} · {r.data_config.timeframe}
+                    {r.dataConfig.symbol} · {r.dataConfig.timeframe}
                   </p>
                 </button>
               ))}
@@ -345,7 +345,7 @@ function RunDetail({
   onDelete: (id: string) => void;
 }) {
   const m = run.metrics;
-  const cfg = run.data_config;
+  const cfg = run.dataConfig;
 
   return (
     <div className="space-y-6 animate-slide-up-fade">
@@ -353,11 +353,11 @@ function RunDetail({
       <div className="flex items-start justify-between">
         <div>
           <h2 className="font-serif italic text-title text-ink">
-            {run.strategy_name}
+            {run.strategyName}
           </h2>
           <p className="text-small text-muted mt-0.5">
-            {cfg.symbol} · {cfg.asset_class} · {cfg.timeframe} ·{" "}
-            {cfg.start_date} → {cfg.end_date}
+            {cfg.symbol} · {cfg.assetClass} · {cfg.timeframe} ·{" "}
+            {cfg.startDate} → {cfg.endDate}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -386,7 +386,7 @@ function RunDetail({
         <div className="bg-[#fdecea] border border-[#f5c6c2] rounded-lg px-5 py-4">
           <p className="text-body text-negative font-medium mb-1">Run failed</p>
           <p className="text-small text-negative font-mono whitespace-pre-wrap">
-            {run.error_message ?? "No error details."}
+            {run.errorMessage ?? "No error details."}
           </p>
         </div>
       )}
@@ -398,30 +398,30 @@ function RunDetail({
           <div className="grid grid-cols-4 gap-3">
             <MetricCard
               label="Final value"
-              value={`$${fmt(m.final_value, 0)}`}
+              value={`$${fmt(m.finalValue, 0)}`}
             />
-            <MetricCard label="Sharpe ratio" value={fmt(m.sharpe_ratio)} />
-            <MetricCard label="Sortino ratio" value={fmt(m.sortino_ratio)} />
+            <MetricCard label="Sharpe ratio" value={fmt(m.sharpeRatio)} />
+            <MetricCard label="Sortino ratio" value={fmt(m.sortinoRatio)} />
             <MetricCard label="CAGR" value={fmtPct(m.cagr)} />
             <MetricCard
               label="Max drawdown"
-              value={fmtPct(m.max_drawdown)}
-              negative={m.max_drawdown != null && m.max_drawdown < 0}
+              value={fmtPct(m.maxDrawdown)}
+              negative={m.maxDrawdown != null && m.maxDrawdown < 0}
             />
-            <MetricCard label="Win rate" value={fmtPct(m.win_rate)} />
-            <MetricCard label="Profit factor" value={fmt(m.profit_factor)} />
+            <MetricCard label="Win rate" value={fmtPct(m.winRate)} />
+            <MetricCard label="Profit factor" value={fmt(m.profitFactor)} />
             <MetricCard
               label="Total trades"
-              value={String(m.total_trades ?? "—")}
+              value={String(m.totalTrades ?? "—")}
             />
           </div>
 
           {/* Log */}
-          {run.log_output && (
+          {run.logOutput && (
             <div>
               <p className="text-small text-muted mb-1">Log</p>
               <pre className="text-small font-mono text-ink bg-surface border border-border rounded-lg px-4 py-3 whitespace-pre-wrap">
-                {run.log_output}
+                {run.logOutput}
               </pre>
             </div>
           )}

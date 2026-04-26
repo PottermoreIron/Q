@@ -14,6 +14,46 @@ class ApiError extends Error {
   }
 }
 
+// ── Case transformers ─────────────────────────────────────────────────────────
+
+function snakeToCamelStr(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+function camelToSnakeStr(s: string): string {
+  return s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function snakeToCamel(obj: unknown): any {
+  if (Array.isArray(obj)) return obj.map(snakeToCamel);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+        snakeToCamelStr(k),
+        snakeToCamel(v),
+      ]),
+    );
+  }
+  return obj;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function camelToSnake(obj: unknown): any {
+  if (Array.isArray(obj)) return obj.map(camelToSnake);
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+        camelToSnakeStr(k),
+        camelToSnake(v),
+      ]),
+    );
+  }
+  return obj;
+}
+
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -31,6 +71,15 @@ async function request<T>(
     throw new ApiError(res.status, body.detail ?? res.statusText);
   }
   return res.json() as Promise<T>;
+}
+
+async function requestCamel<T>(
+  path: string,
+  options: RequestInit = {},
+  token?: string,
+): Promise<T> {
+  const raw = await request<unknown>(path, options, token);
+  return snakeToCamel(raw) as T;
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -138,62 +187,97 @@ export const strategies = {
 };
 
 // ── Backtests ─────────────────────────────────────────────────────────────────
+// Wire format: snake_case. TS surface: camelCase via snakeToCamel transformer.
 
 export type DataConfig = {
   source: DataSource;
   symbol: string;
-  asset_class: AssetClass;
+  assetClass: AssetClass;
   timeframe: Timeframe;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
 };
 
 export type Metrics = {
-  sharpe_ratio: number | null;
-  sortino_ratio: number | null;
+  schemaVersion: number;
+  // core
+  finalValue: number | null;
+  totalReturn: number | null;
   cagr: number | null;
-  max_drawdown: number | null;
-  win_rate: number | null;
-  total_trades: number | null;
-  profit_factor: number | null;
-  final_value: number | null;
+  // risk
+  volatility: number | null;
+  downsideVolatility: number | null;
+  sharpeRatio: number | null;
+  sortinoRatio: number | null;
+  var95: number | null;
+  cvar95: number | null;
+  maxDrawdown: number | null;
+  maxDrawdownDurationDays: number | null;
+  calmarRatio: number | null;
+  // distribution
+  omegaRatio: number | null;
+  tailRatio: number | null;
+  // trade quality
+  winRate: number | null;
+  totalTrades: number | null;
+  profitFactor: number | null;
+  avgWin: number | null;
+  avgLoss: number | null;
+  largestWin: number | null;
+  largestLoss: number | null;
+  avgTradeDurationBars: number | null;
+  // exposure
+  exposurePct: number | null;
+  turnover: number | null;
 };
 
 export type Trade = {
-  entry_price: number;
-  exit_price: number;
+  entryPrice: number;
+  exitPrice: number;
   pnl: number;
   side: string;
+  fees: number;
+  slippageCost: number;
+  entryTime: string | null;
+  exitTime: string | null;
+  quantity: number | null;
+  pnlPct: number | null;
+  barsHeld: number | null;
+  mae: number | null;
+  mfe: number | null;
 };
 
 export type BacktestRun = {
   id: string;
-  strategy_id: string | null;
-  strategy_name: string;
-  data_config: DataConfig;
+  strategyId: string | null;
+  strategyName: string;
+  dataConfig: DataConfig;
   status: "pending" | "running" | "completed" | "failed";
   engine: string | null;
   metrics: Metrics | null;
-  // sampled equity curve: array of [iso_timestamp, value] pairs
-  equity_curve: [string, number][] | null;
+  equityCurve: [string, number][] | null;
   trades: Trade[] | null;
-  error_message: string | null;
-  log_output: string | null;
-  created_at: string;
-  completed_at: string | null;
+  errorMessage: string | null;
+  logOutput: string | null;
+  asOfTime: string | null;
+  createdAt: string;
+  completedAt: string | null;
 };
 
 export const backtests = {
-  create: (body: { strategy_id: string; data_config: DataConfig }, token?: string) =>
-    request<BacktestRun>("/backtests", { method: "POST", body: JSON.stringify(body) }, token),
+  create: (body: { strategyId: string; dataConfig: DataConfig }, token?: string) =>
+    requestCamel<BacktestRun>("/backtests", {
+      method: "POST",
+      body: JSON.stringify(camelToSnake(body)),
+    }, token),
 
-  list: (strategy_id?: string, token?: string) => {
-    const qs = strategy_id ? `?strategy_id=${strategy_id}` : "";
-    return request<BacktestRun[]>(`/backtests${qs}`, {}, token);
+  list: (strategyId?: string, token?: string) => {
+    const qs = strategyId ? `?strategy_id=${strategyId}` : "";
+    return requestCamel<BacktestRun[]>(`/backtests${qs}`, {}, token);
   },
 
   get: (id: string, token?: string) =>
-    request<BacktestRun>(`/backtests/${id}`, {}, token),
+    requestCamel<BacktestRun>(`/backtests/${id}`, {}, token),
 
   delete: (id: string, token?: string) =>
     fetch(`${BASE_URL}/backtests/${id}`, {
