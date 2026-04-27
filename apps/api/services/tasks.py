@@ -15,6 +15,7 @@ from config import settings
 from services.celery_app import celery_app
 from services.data.registry import get_provider
 from services.engines.registry import get_engine
+from services.engines.strategy_shape import shape_from_code
 
 
 def _make_session() -> async_sessionmaker:
@@ -55,7 +56,10 @@ async def _run_async(task, run_id: str) -> None:
 
             logs.append(f"Loaded {len(bars)} bars. Running strategy…")
 
-            engine = get_engine(cfg["asset_class"])
+            engine = get_engine(
+                hint=cfg.get("engine_hint"),
+                shape=shape_from_code(run.strategy_code),
+            )
             result = await engine.run(run.strategy_code, bars)
 
             run.status       = "completed"

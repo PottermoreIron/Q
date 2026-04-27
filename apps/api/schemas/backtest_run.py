@@ -14,6 +14,7 @@ class DataConfigIn(BaseModel):
 class CreateRunIn(BaseModel):
     strategy_id: str
     data_config: DataConfigIn
+    engine_hint: Optional[str] = None
 
 
 class MetricsOut(BaseModel):

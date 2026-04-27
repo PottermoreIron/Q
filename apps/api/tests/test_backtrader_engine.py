@@ -246,7 +246,7 @@ async def test_accepts_a_share_commission():
 
 # ── Registry wiring ───────────────────────────────────────────────────────────
 
-def test_registry_returns_backtrader_for_stock():
+def test_registry_returns_backtrader_for_event_driven_shape():
     from services.engines.registry import get_engine
-    engine = get_engine("stock")
+    engine = get_engine(shape="event_driven")
     assert isinstance(engine, BacktraderEngine)

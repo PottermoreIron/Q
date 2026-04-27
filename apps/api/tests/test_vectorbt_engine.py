@@ -229,9 +229,9 @@ async def test_accepts_percentage_commission():
 
 # ── Registry wiring ───────────────────────────────────────────────────────────
 
-def test_registry_returns_vectorbt_for_crypto():
+def test_registry_returns_vectorbt_for_vectorisable_shape():
     from services.engines.registry import get_engine
-    engine = get_engine("crypto")
+    engine = get_engine(shape="vectorisable")
     assert isinstance(engine, VectorBTEngine)
 
 

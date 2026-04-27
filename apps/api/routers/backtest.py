@@ -22,8 +22,9 @@ from models.backtest_run import BacktestRun
 from models.strategy import Strategy
 from schemas.backtest_run import BacktestRunOut, CreateRunIn, MetricsOut
 from services.data.registry import get_provider
-from services.engines.exceptions import EngineError
+from services.engines.exceptions import EngineError, EngineUnavailable
 from services.engines.registry import get_engine
+from services.engines.strategy_shape import shape_from_code
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
@@ -106,13 +107,20 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
         await db.commit()
         return _out(run)
 
+    shape = shape_from_code(strategy.python_code)
+
+    # Resolve engine early so an invalid hint returns 422 before we start running.
+    try:
+        engine = get_engine(hint=body.engine_hint, shape=shape)
+    except EngineUnavailable as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
     if len(bars) <= _INLINE_BAR_LIMIT:
         # ── Inline execution ──────────────────────────────────────────────
         run.status = "running"
         await db.commit()
 
         try:
-            engine = get_engine(cfg.asset_class)
             result = await engine.run(strategy.python_code, bars)
 
             run.status       = "completed"
@@ -134,6 +142,8 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
 
     else:
         # ── Celery async execution ────────────────────────────────────────
+        # Persist engine_hint in data_config so the Celery worker can honour it.
+        run.data_config = {**run.data_config, "engine_hint": body.engine_hint}
         try:
             from services.tasks import run_backtest_task
             task = run_backtest_task.delay(run.id)
@@ -145,7 +155,6 @@ async def create_run(body: CreateRunIn, db: AsyncSession = Depends(get_db)) -> B
             run.status = "running"
             await db.commit()
             try:
-                engine = get_engine(cfg.asset_class)
                 result = await engine.run(strategy.python_code, bars)
                 run.status       = "completed"
                 run.engine       = result.engine

@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 import models.ohlcv_bar  # registers OHLCVBarRow with Base.metadata  # noqa: F401
 
@@ -28,6 +29,14 @@ app.include_router(auth_router)
 app.include_router(data_router)
 app.include_router(strategy_router)
 app.include_router(backtest_router)
+
+
+@app.exception_handler(Exception)
+async def _engine_unavailable_handler(request: Request, exc: Exception) -> JSONResponse:
+    from services.engines.exceptions import EngineUnavailable
+    if isinstance(exc, EngineUnavailable):
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+    raise exc
 
 
 @app.get("/")

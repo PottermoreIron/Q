@@ -1,45 +1,70 @@
 """
 Engine registry.
 
-Routes to the best available engine for the given asset class.
-Falls back to SimpleEngine when the preferred engine is not installed or
-not yet implemented — no caller needs to handle ImportError or
-NotImplementedError.
+Routing rules:
+  - Explicit hint   → use exactly that engine; raise EngineUnavailable (→ HTTP 422) if missing.
+                      Never silently falls back.
+  - shape=vectorisable → VectorBTEngine, fallback to SimpleEngine if not installed.
+  - shape=event_driven → BacktraderEngine, fallback to SimpleEngine if not installed.
+  - No hint, no shape  → SimpleEngine.
+
+Auto-routing may fall back to SimpleEngine; explicit hints may not.
+The response always carries `result.engine` so callers can see what actually ran.
 """
 from __future__ import annotations
 
-from schemas.data import AssetClass
+from typing import Optional
+
+from services.engines.exceptions import EngineUnavailable
 from services.engines.protocol import BacktestEngine
 from services.engines.simple import SimpleEngine
 
+_KNOWN_HINTS = ("simple", "vectorbt", "backtrader")
 
-def get_engine(asset_class: AssetClass) -> BacktestEngine:
-    """
-    Return the best available BacktestEngine for the given asset class.
 
-    Routing intent (falls back to SimpleEngine until engines are implemented):
-      crypto          → VectorBTEngine   (vectorised, handles crypto conventions)
-      stock/forex/    → BacktraderEngine (event-driven, handles splits/dividends)
-      futures/options
-    """
-    if asset_class == "crypto":
+def get_engine(
+    *,
+    hint: Optional[str] = None,
+    shape: Optional[str] = None,
+) -> BacktestEngine:
+    if hint is not None:
+        if hint not in _KNOWN_HINTS:
+            raise EngineUnavailable(hint, f"unknown engine. Valid hints: {', '.join(_KNOWN_HINTS)}")
+        if hint == "simple":
+            return SimpleEngine()
+        if hint == "vectorbt":
+            return _require_vectorbt()
+        if hint == "backtrader":
+            return _require_backtrader()
+
+    if shape == "vectorisable":
         try:
-            from services.engines.vectorbt import VectorBTEngine
-            engine = VectorBTEngine()
-            # Probe that it's actually functional before committing
-            engine.run  # noqa: B018
-            import vectorbt  # noqa: F401
-            return engine
-        except (ImportError, NotImplementedError):
-            pass
+            return _require_vectorbt()
+        except EngineUnavailable:
+            return SimpleEngine()
 
-    else:
+    if shape == "event_driven":
         try:
-            from services.engines.backtrader import BacktraderEngine
-            engine = BacktraderEngine()
-            import backtrader  # noqa: F401
-            return engine
-        except (ImportError, NotImplementedError):
-            pass
+            return _require_backtrader()
+        except EngineUnavailable:
+            return SimpleEngine()
 
     return SimpleEngine()
+
+
+def _require_vectorbt() -> BacktestEngine:
+    try:
+        import vectorbt  # noqa: F401 — probe; raises ImportError if not installed
+        from services.engines.vectorbt import VectorBTEngine
+        return VectorBTEngine()
+    except ImportError as exc:
+        raise EngineUnavailable("vectorbt", str(exc)) from exc
+
+
+def _require_backtrader() -> BacktestEngine:
+    try:
+        import backtrader  # noqa: F401 — probe
+        from services.engines.backtrader import BacktraderEngine
+        return BacktraderEngine()
+    except ImportError as exc:
+        raise EngineUnavailable("backtrader", str(exc)) from exc
